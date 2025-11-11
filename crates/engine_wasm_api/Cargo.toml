@@ -1,0 +1,20 @@
+
+[package]
+name = "engine_wasm_api"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-bindgen = { workspace = true }
+wasm-bindgen-futures = { workspace = true }
+web-sys = { workspace = true }
+engine_core = { path = "../engine_core" }
+engine_scene = { path = "../engine_scene" }
+engine_assets = { path = "../engine_assets" }
+platform_web = { path = "../platform_web" }
+console_error_panic_hook = { workspace = true }
+serde_json = { workspace = true }
+ron = { workspace = true }

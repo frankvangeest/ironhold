@@ -1,0 +1,1 @@
+// Placeholder ESM entry that will re-export wasm-bindgen output.

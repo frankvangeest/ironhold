@@ -1,0 +1,9 @@
+
+[package]
+name = "editor_ui"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+egui = { workspace = true }
+engine_core = { path = "../engine_core" }

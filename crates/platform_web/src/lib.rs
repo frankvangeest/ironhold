@@ -1,0 +1,19 @@
+
+pub mod wgpu_init;
+
+use wasm_bindgen::prelude::*;
+use web_sys::{WebSocket, MessageEvent};
+
+#[wasm_bindgen]
+pub fn webgpu_supported() -> bool {
+    // Minimal feature-detection via JS (navigator.gpu)
+    js_sys::Reflect::has(&web_sys::window().unwrap(), &JsValue::from_str("navigator")).unwrap_or(false)
+}
+
+pub mod hotreload {
+    use super::*;
+    pub fn start_ws(_url: &str) -> Option<WebSocket> {
+        // Placeholder: connect to ws and emit events
+        None
+    }
+}

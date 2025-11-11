@@ -1,0 +1,13 @@
+{
+  "name": "@van-geest/ironhold",
+  "version": "0.1.0",
+  "description": "Ironhold prebuilt WASM engine",
+  "type": "module",
+  "files": [
+    "dist/"
+  ],
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "types": "./dist/index.d.ts"
+}
