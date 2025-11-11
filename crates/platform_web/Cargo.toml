@@ -5,9 +5,13 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-wasm-bindgen = { workspace = true }
-wasm-bindgen-futures = { workspace = true }
-web-sys = { workspace = true }
-js-sys = { workspace = true }
-wgpu = { workspace = true }
-thiserror = { workspace = true }
+wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
+wasm-bindgen-futures = "0.4"
+web-sys = { version = "0.3", features = [
+  "Window","Document","HtmlCanvasElement","console","Performance","Request",
+  "Response","RequestInit","RequestMode","Headers","WebSocket","MessageEvent",
+  "BinaryType","Location"
+] }
+js-sys = "0.3"
+wgpu = "0.20"
+thiserror = "1"

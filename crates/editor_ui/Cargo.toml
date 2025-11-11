@@ -5,5 +5,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-egui = { workspace = true }
+egui = "0.29"
 engine_core = { path = "../engine_core" }
+# wgpu = "0.20"
+# thiserror = "1"

@@ -8,13 +8,20 @@ edition = "2021"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-wasm-bindgen = { workspace = true }
-wasm-bindgen-futures = { workspace = true }
-web-sys = { workspace = true }
+wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
+wasm-bindgen-futures = "0.4"
+web-sys = { version = "0.3", features = ["Window","Document","HtmlCanvasElement","console"] }
+console_error_panic_hook = "0.1"
+serde_json = "1"
+ron = "0.8"
+js-sys = "0.3"
+
 engine_core = { path = "../engine_core" }
 engine_scene = { path = "../engine_scene" }
 engine_assets = { path = "../engine_assets" }
 platform_web = { path = "../platform_web" }
-console_error_panic_hook = { workspace = true }
-serde_json = { workspace = true }
-ron = { workspace = true }
+
+
+# ✅ For the browser target, enable getrandom's JS backend (uses crypto.getRandomValues)
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { version = "0.3", features = ["wasm_js"] }

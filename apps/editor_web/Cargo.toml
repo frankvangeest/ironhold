@@ -10,12 +10,19 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 engine_wasm_api = { path = "../../crates/engine_wasm_api" }
 editor_ui = { path = "../../crates/editor_ui" }
-eframe = { workspace = true }
-egui = { workspace = true }
-wasm-bindgen = { workspace = true }
-wasm-bindgen-futures = { workspace = true }
-web-sys = { workspace = true }
-console_error_panic_hook = { workspace = true }
+
+# WebGPU backend for eframe (works in WASM when browser supports WebGPU)
+eframe = { version = "0.29", default-features = false, features = ["wgpu"] }
+egui   = { version = "0.29" }
+
+wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
+wasm-bindgen-futures = "0.4"
+web-sys = { version = "0.3", features = [
+  "Window","Document","HtmlCanvasElement","console","Performance","Request",
+  "Response","RequestInit","RequestMode","Headers","WebSocket","MessageEvent",
+  "BinaryType","Location"
+] }
+console_error_panic_hook = "0.1"
 
 [features]
 default = []

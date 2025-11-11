@@ -1,5 +1,4 @@
-
-use bevy_ecs::prelude::*;
+use bevy_ecs::{prelude::World, schedule::Schedule};
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum Mode { Edit, Play }
