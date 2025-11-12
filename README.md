@@ -16,25 +16,25 @@ A web-first Rust game engine **library** (prebuilt to WebAssembly and usable fro
 - **No scripting/physics** for MVP (add later via features).
 
 ## Workspace Structure (web-first)
-apps/
-editor_web/           # Browser editor shell (egui/eframe)
-host_web/             # Minimal host sample (future)
-crates/
-engine_core/          # ECS app, edit/play schedules
-engine_ecs/           # Re-exports ECS utilities (lean)
-engine_render/        # wgpu renderer (to implement)
-engine_input/         # input abstraction (stub)
-engine_assets/        # assets + RON + hot-reload hooks
-engine_scene/         # scene types + serde/RON
-engine_ui/            # retained-mode game UI (taffy) stub
-platform_web/         # WASM bindings; WebGPU init; WS hooks
-editor_core/          # editor model (selection/cmd/undo) stub
-editor_ui/            # egui panels (inspector, hierarchy) stub
-engine_wasm_api/      # wasm-bindgen JS API facade (prebuilt lib)
-xtask/                # dev server, build/bundle tasks
-web/
-engine-npm/           # npm packaging skeleton
-static/               # editor CSS, etc.
-assets/
+- apps/
+  - editor_web/           # Browser editor shell (egui/eframe)
+  - host_web/             # Minimal host sample (future)
+- crates/
+  - editor_core/          # editor model (selection/cmd/undo) stub
+  - editor_ui/            # egui panels (inspector, hierarchy) stub
+  - engine_assets/        # assets + RON + hot-reload hooks
+  - engine_core/          # ECS app, edit/play schedules
+  - engine_ecs/           # Re-exports ECS utilities (lean)
+  - engine_input/         # input abstraction (stub)
+  - engine_render/        # wgpu renderer (to implement)
+  - engine_scene/         # scene types + serde/RON
+  - engine_ui/            # retained-mode game UI (taffy) stub
+  - engine_wasm_api/      # wasm-bindgen JS API facade (prebuilt lib)
+  - platform_web/         # WASM bindings; WebGPU init; WS hooks
+  - xtask/                # dev server, build/bundle tasks
+- web/
+  - engine-npm/           # npm packaging skeleton
+  - static/               # editor CSS, etc.
+- assets/
 
 See more in `docs/ARCHITECTURE.md`.
