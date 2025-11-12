@@ -19,6 +19,7 @@ A web-first Rust game engine **library** (prebuilt to WebAssembly and usable fro
 - apps/
   - editor_web/           # Browser editor shell (egui/eframe)
   - host_web/             # Minimal host sample (future)
+- assets/
 - crates/
   - editor_core/          # editor model (selection/cmd/undo) stub
   - editor_ui/            # egui panels (inspector, hierarchy) stub
@@ -32,9 +33,24 @@ A web-first Rust game engine **library** (prebuilt to WebAssembly and usable fro
   - engine_wasm_api/      # wasm-bindgen JS API facade (prebuilt lib)
   - platform_web/         # WASM bindings; WebGPU init; WS hooks
   - xtask/                # dev server, build/bundle tasks
+- docs/
+  - ARCHITECTURE.md
+  - BUILD.md
+  - EDITOR_NOTES.md
+  - TODO.md
+  - TROUBLESHOOTING.md
+  - WEBGPU_SETUP.md
 - web/
   - engine-npm/           # npm packaging skeleton
   - static/               # editor CSS, etc.
-- assets/
+- README.md
+- Cargo.toml              # Root Cargo file
+- LICENSE                 # Dual MIT and Apache license
+
 
 See more in `docs/ARCHITECTURE.md`.
+
+
+## License
+Dual licensed under MIT and Apache 2.0.
+Any assets in this repo fall under CC0 (public domain) or CC BY (give credit to creator).
