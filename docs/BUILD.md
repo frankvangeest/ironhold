@@ -49,6 +49,12 @@ cargo build -p engine_wasm_api --target wasm32-unknown-unknown
 cargo build -p editor_web     --target wasm32-unknown-unknown
 ```
 
+## Create a snapshot of all *.md, *.rs and *.toml files in the project to /docs/project_snapshot.txt
+
+```bat
+cargo run -p xtask -- export-sources
+```
+
 ## Editor (eframe/web) specifics
 
 - Use `eframe = { version = "0.29", default-features = false, features = ["wgpu"] }`

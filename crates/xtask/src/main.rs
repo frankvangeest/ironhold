@@ -5,30 +5,42 @@
  */
 
 use clap::{Parser, Subcommand};
-use std::{env, fs, path::PathBuf, thread};
-
-use std::str::FromStr;
-use tiny_http::Header;
-
+use std::{env, fs, io::Write, path::{Path, PathBuf}, process::Command};
+use walkdir::WalkDir;
 
 #[derive(Parser)]
 #[command(name = "xtask")]
-struct XTask { #[command(subcommand)] cmd: Cmd }
+struct XTask {
+    #[command(subcommand)]
+    cmd: Cmd,
+}
 
 #[derive(Subcommand)]
 enum Cmd {
+    /// Dev server (web) - builds wasm and serves static
     DevWeb {
         #[arg(long, default_value_t = 5173)]
         port: u16,
     },
+    /// Build wasm artifacts (release) - (stub bindgen)
     BuildWeb,
+    /// Bundle editor (stub)
     BundleEditor,
+
+    /// Export all *.md, *.rs, *.toml into a single txt with code fences
+    ExportSources {
+        /// Output path (defaults to docs/project_snapshot.txt)
+        #[arg(long, default_value = "docs/project_snapshot.txt")]
+        out: String,
+    },
 }
 
 fn ensure_wasm_js_rustflags(mut current: String) -> String {
     let token = r#"--cfg getrandom_backend="wasm_js""#;
     if !current.contains(token) {
-        if !current.is_empty() && !current.ends_with(' ') { current.push(' '); }
+        if !current.is_empty() && !current.ends_with(' ') {
+            current.push(' ');
+        }
         current.push_str(token);
     }
     current
@@ -37,16 +49,19 @@ fn ensure_wasm_js_rustflags(mut current: String) -> String {
 fn run_build(target_pkg: &str, release: bool) {
     let rf = env::var("RUSTFLAGS").unwrap_or_default();
     let rf = ensure_wasm_js_rustflags(rf);
-    let mut cmd = std::process::Command::new("cargo");
+    let mut cmd = Command::new("cargo");
     let mut args = vec!["build", "-p", target_pkg, "--target", "wasm32-unknown-unknown"];
-    if release { args.insert(1, "--release"); }
+    if release {
+        args.insert(1, "--release");
+    }
     let status = cmd.env("RUSTFLAGS", rf).args(args).status().expect("spawn cargo");
-    if !status.success() { std::process::exit(status.code().unwrap_or(1)); }
+    if !status.success() {
+        std::process::exit(status.code().unwrap_or(1));
+    }
 }
 
-fn serve_static(port: u16) {
+fn respond_static_server(port: u16) {
     use tiny_http::{Server, Response, Method, StatusCode, Header, Request};
-    use std::{fs, path::PathBuf};
     use std::str::FromStr;
 
     fn respond_not_found(req: Request) {
@@ -59,8 +74,6 @@ fn serve_static(port: u16) {
         match fs::read(&path) {
             Ok(bytes) => {
                 let mut resp = Response::from_data(bytes);
-
-                // naive content-type
                 match path.extension().and_then(|s| s.to_str()).unwrap_or_default() {
                     "css"  => resp.add_header(Header::from_str("Content-Type: text/css").unwrap()),
                     "js"   => resp.add_header(Header::from_str("Content-Type: application/javascript").unwrap()),
@@ -70,7 +83,6 @@ fn serve_static(port: u16) {
                     "ron"  => resp.add_header(Header::from_str("Content-Type: text/plain; charset=utf-8").unwrap()),
                     _ => {}
                 }
-
                 let _ = req.respond(resp);
             }
             Err(_) => respond_not_found(req),
@@ -86,18 +98,15 @@ fn serve_static(port: u16) {
     println!("  - /pkg/*       -> web/engine-npm/dist/* (after bindgen)");
 
     for req in server.incoming_requests() {
-        // 🔎 Peek into request without consuming it yet
-        let url = req.url().to_string();    // snapshot
-        let method = req.method().clone();  // Method (value)
+        let url = req.url().to_string();
+        let method = req.method().clone();
 
-        // Route selection happens here; then we consume `req` once.
         if method == Method::Get && url == "/" {
             let path = PathBuf::from("apps/editor_web/index.html");
             respond_file(req, path);
             continue;
         }
 
-        // Static mappings
         let (base, strip) = if url.starts_with("/static/") {
             ("web/static", "/static/")
         } else if url.starts_with("/assets/") {
@@ -119,35 +128,124 @@ fn serve_static(port: u16) {
     }
 }
 
-
 fn ws_thread(port: u16) {
-    // Very small WS server for future hot reload. For now, accept connections.
+    // very simple echo WS (place-holder for hot reload)
     let addr = format!("127.0.0.1:{}", port + 1);
     println!("WS listening on ws://{addr}/ws");
-    thread::spawn(move || {
-        ws::listen(addr, |out| {
-            move |msg| {
-                // echo for now
-                out.send(msg)
-            }
-        }).expect("ws listen")
+    std::thread::spawn(move || {
+        ws::listen(addr, |out| move |msg| out.send(msg)).expect("ws listen");
     });
+}
+
+/// Return true if path should be skipped (build outputs, VCS, etc.)
+fn is_skipped_dir(p: &Path) -> bool {
+    if let Some(name) = p.file_name().and_then(|s| s.to_str()) {
+        matches!(
+            name,
+            "target" | "dist" | "node_modules" | ".git"
+        )
+    } else {
+        false
+    }
+}
+
+/// Map extension to code fence language
+fn lang_for(ext: &str) -> &'static str {
+    match ext {
+        "rs"    => "rust",
+        "toml"  => "toml",
+        "md"    => "markdown",
+        "ron"   => "text", // not requested, but harmless if included later
+        _       => "text",
+    }
+}
+
+/// Normalize path to forward slashes for the code fence header
+fn to_forward_slash(p: &Path) -> String {
+    p.to_string_lossy().replace('\\', "/")
+}
+
+fn export_sources(out_path: &str) -> std::io::Result<()> {
+    // Collect candidate files
+    let mut files: Vec<PathBuf> = Vec::new();
+    for entry in WalkDir::new(".").into_iter().filter_map(Result::ok) {
+        let path = entry.path();
+
+        // Skip directories we don't want
+        if entry.file_type().is_dir() && is_skipped_dir(path) {
+            // Skip walking into this directory
+            continue;
+        }
+
+        if !entry.file_type().is_file() {
+            continue;
+        }
+
+        let ext = path.extension().and_then(|s| s.to_str()).unwrap_or_default().to_ascii_lowercase();
+        let include = matches!(ext.as_str(), "md" | "rs" | "toml");
+        if include {
+            // Also skip files in skipped dirs (defensive)
+            if path.components().any(|c| {
+                c.as_os_str().to_string_lossy().as_ref() == "target"
+                    || c.as_os_str().to_string_lossy().as_ref() == "dist"
+                    || c.as_os_str().to_string_lossy().as_ref() == "node_modules"
+                    || c.as_os_str().to_string_lossy().as_ref() == ".git"
+            }) {
+                continue;
+            }
+            files.push(path.to_path_buf());
+        }
+    }
+
+    // Deterministic order
+    files.sort_by(|a, b| to_forward_slash(a).cmp(&to_forward_slash(b)));
+
+    // Ensure parent dir for output exists
+    if let Some(parent) = Path::new(out_path).parent() {
+        if !parent.exists() {
+            fs::create_dir_all(parent)?;
+        }
+    }
+
+    let mut out = fs::File::create(out_path)?;
+    for f in &files {
+        let rel = to_forward_slash(&f);
+        let ext = f.extension().and_then(|s| s.to_str()).unwrap_or_default().to_ascii_lowercase();
+        let lang = lang_for(&ext);
+
+        // Header: path fence
+        writeln!(out, "```path")?;
+        writeln!(out, "{rel}")?;
+        writeln!(out, "```")?;
+        writeln!(out, "```{lang}")?;
+
+        // Contents
+        let bytes = fs::read(&f)?;
+        out.write_all(&bytes)?;
+        // Ensure trailing newline before closing fence
+        if !bytes.ends_with(b"\n") {
+            writeln!(out)?;
+        }
+
+        writeln!(out, "```")?;
+        writeln!(out)?; // spacer line
+    }
+
+    println!("Exported {} files into {}", files.len(), out_path);
+    Ok(())
 }
 
 fn main() {
     let args = XTask::parse();
     match args.cmd {
         Cmd::DevWeb { port } => {
-            // 1) build wasm api (debug)
+            // build wasm targets (debug)
             run_build("engine_wasm_api", false);
-            // (optionally) build editor_web as well
             run_build("editor_web", false);
 
-            // 2) start WS
+            // start ws + server
             ws_thread(port);
-
-            // 3) start static server (blocking)
-            serve_static(port);
+            respond_static_server(port);
         }
         Cmd::BuildWeb => {
             run_build("engine_wasm_api", true);
@@ -155,6 +253,12 @@ fn main() {
         }
         Cmd::BundleEditor => {
             println!("(stub) build editor_web and copy to dist/editor");
+        }
+        Cmd::ExportSources { out } => {
+            if let Err(e) = export_sources(&out) {
+                eprintln!("export failed: {e}");
+                std::process::exit(1);
+            }
         }
     }
 }
