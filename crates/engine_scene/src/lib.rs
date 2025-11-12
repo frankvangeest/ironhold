@@ -1,3 +1,7 @@
+/**
+ * path: /crates/engine_scene/src/lib.rs
+ * description: Scene representation and serialization.
+ */
 
 use serde::{Serialize, Deserialize};
 

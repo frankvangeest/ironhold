@@ -1,3 +1,8 @@
+/**
+ * path: /crates/platform_web/src/lib.rs
+ * description: Web platform support for the project, including WebGPU feature detection
+ * and hot-reloading capabilities.
+ */
 
 pub mod wgpu_init;
 

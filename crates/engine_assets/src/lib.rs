@@ -1,3 +1,7 @@
+/**
+ * path: /crates/engine_assets/src/lib.rs
+ * description: Asset management for the engine.
+ */
 
 use thiserror::Error;
 

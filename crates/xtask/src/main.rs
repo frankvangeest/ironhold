@@ -1,3 +1,9 @@
+/**
+ * path: /crates/xtask/src/main.rs
+ * description: An xtask for building and serving the web components of the project.
+ * It supports commands for development server, building web assets, and bundling the editor.
+ */
+
 use clap::{Parser, Subcommand};
 use std::{env, fs, path::PathBuf, thread};
 

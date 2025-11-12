@@ -1,3 +1,7 @@
+/**
+ * path: /crates/engine_wasm_api/src/lib.rs
+ * description: WASM bindings for the engine using wasm-bindgen.
+ */
 
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;

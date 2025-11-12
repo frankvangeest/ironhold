@@ -1,3 +1,8 @@
+#
+# path: /crates/engine_wasm_api/Cargo.toml
+# description: Cargo manifest for the WebAssembly API crate of the engine.
+# This crate provides web-specific implementations and bindings for the engine.
+# 
 
 [package]
 name = "engine_wasm_api"

@@ -1,3 +1,8 @@
+/**
+ * path: /apps/editor_web/src/lib.rs
+ * description: Web-based editor application using eframe and WASM.
+ */
+
 // Only compile this file’s content on wasm32:
 #![cfg(target_arch = "wasm32")]
 

@@ -1,3 +1,7 @@
+/**
+ * path: /crates/platform_web/src/wgpu_init.rs
+ * description: WebGPU initialization for web platform.
+ */
 
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;

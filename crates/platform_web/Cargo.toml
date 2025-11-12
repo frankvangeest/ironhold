@@ -1,3 +1,7 @@
+#
+# path: /crates/platform_web/Cargo.toml
+# description: Cargo manifest for the platform_web crate.
+#
 
 [package]
 name = "platform_web"

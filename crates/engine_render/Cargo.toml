@@ -1,3 +1,7 @@
+#
+# path: /crates/engine_render/Cargo.toml
+# description: Cargo manifest for the engine_render crate
+#
 
 [package]
 name = "engine_render"

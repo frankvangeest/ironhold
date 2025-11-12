@@ -1,3 +1,7 @@
+#
+# path: /crates/editor_ui/Cargo.toml
+# description: Cargo manifest for the editor_ui crate
+#
 
 [package]
 name = "editor_ui"

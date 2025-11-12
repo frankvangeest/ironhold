@@ -1,3 +1,7 @@
+#
+# path: /apps/host_web/Cargo.toml
+# description: Cargo manifest for the host_web application
+#
 
 [package]
 name = "host_web"

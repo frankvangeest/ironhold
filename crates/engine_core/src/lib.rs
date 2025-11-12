@@ -1,3 +1,8 @@
+/**
+ * path: /crates/engine_core/src/lib.rs
+ * description: Core engine application logic and structures.
+ */
+
 use bevy_ecs::{prelude::World, schedule::Schedule};
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]

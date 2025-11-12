@@ -1,3 +1,7 @@
+#
+# path: /crates/engine_ui/Cargo.toml
+# description: Cargo manifest for the UI crate of the engine.
+#
 
 [package]
 name = "engine_ui"
