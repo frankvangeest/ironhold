@@ -14,7 +14,6 @@ editor_ui = { path = "../../crates/editor_ui" }
 # WebGPU backend for eframe (works in WASM when browser supports WebGPU)
 eframe = { version = "0.29", default-features = false, features = ["wgpu"] }
 egui   = { version = "0.29" }
-
 wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
 wasm-bindgen-futures = "0.4"
 web-sys = { version = "0.3", features = [
