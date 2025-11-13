@@ -4,17 +4,128 @@
  */
 
 use wasm_bindgen::prelude::*;
-use wasm_bindgen_futures::JsFuture;
 use web_sys::HtmlCanvasElement;
 use wgpu::*;
+use std::ptr::NonNull;
+// NEW: use the rwh re-export from wgpu (matches wgpu's version exactly)
+use wgpu::rwh;
 
-#[derive(thiserror::Error, Debug)]
-pub enum InitError {
-    #[error("webgpu not available")] WebGpuUnavailable,
-    #[error("wgpu init failed")] InitFailed,
+/// Graphics context tied to a specific HTML canvas.
+pub struct WgpuContext {
+    pub canvas: HtmlCanvasElement,
+    pub surface: Surface<'static>,
+    pub device: Device,
+    pub queue: Queue,
+    pub config: SurfaceConfiguration,
 }
 
-pub async fn init_wgpu(_canvas: &HtmlCanvasElement) -> Result<(Device, Queue, SurfaceConfiguration), JsValue> {
-    // This is a stub. Real implementation would request adapter/device, configure surface.
-    Err(JsValue::from_str("wgpu init stub"))
+/// Thin wrapper that turns an HtmlCanvasElement into a window/display handle.
+struct CanvasHandle {
+    canvas: HtmlCanvasElement,
+}
+
+impl CanvasHandle {
+    fn new(canvas: HtmlCanvasElement) -> Self {
+        Self { canvas }
+    }
+}
+
+impl rwh::HasWindowHandle for CanvasHandle {
+    fn window_handle(&self) -> Result<rwh::WindowHandle<'_>, rwh::HandleError> {
+        let js_value: &wasm_bindgen::JsValue = &self.canvas;
+        let obj: std::ptr::NonNull<std::ffi::c_void> = std::ptr::NonNull::from(js_value).cast();
+        let web_canvas = rwh::WebCanvasWindowHandle::new(obj);
+        let raw = rwh::RawWindowHandle::from(web_canvas);
+        // 1-arg form on the version bundled with wgpu 0.20.x
+        let handle = unsafe { rwh::WindowHandle::borrow_raw(raw) };
+        Ok(handle)
+    }
+}
+
+impl rwh::HasDisplayHandle for CanvasHandle {
+    fn display_handle(&self) -> Result<rwh::DisplayHandle<'_>, rwh::HandleError> {
+        let web_display = rwh::WebDisplayHandle::new();
+        let raw = rwh::RawDisplayHandle::from(web_display);
+        let handle = unsafe { rwh::DisplayHandle::borrow_raw(raw) };
+        Ok(handle)
+    }
+}
+
+/// Initialize WebGPU/WGPU for the given canvas.
+pub async fn init_wgpu(canvas: HtmlCanvasElement) -> Result<WgpuContext, JsValue> {
+    let instance = Instance::new(InstanceDescriptor {
+        backends: Backends::all(),
+        ..Default::default()
+    }); // Instance is the entry point. [2](https://docs.rs/wgpu/latest/wgpu/enum.SurfaceTarget.html)
+
+    // LEAK the handle to get an &'static CanvasHandle (surface needs 'static)
+    let target_ref: &'static CanvasHandle = Box::leak(Box::new(CanvasHandle::new(canvas.clone())));
+
+    let surface = instance
+        .create_surface(target_ref)
+        .map_err(|e| JsValue::from_str(&format!("create_surface failed: {e:?}")))?; // Requires HasWindow/DisplayHandle. 
+
+    let adapter = instance
+        .request_adapter(&RequestAdapterOptions {
+            power_preference: PowerPreference::HighPerformance,
+            compatible_surface: Some(&surface),
+            force_fallback_adapter: false,
+        })
+        .await
+        .ok_or_else(|| JsValue::from_str("No suitable WebGPU adapter found"))?;
+
+    let (device, queue) = adapter
+        .request_device(
+            &DeviceDescriptor {
+                label: Some("ironhold_device"),
+                required_features: Features::empty(),
+                required_limits: Limits::default(),
+            },
+            None,
+        )
+        .await
+        .map_err(|e| JsValue::from_str(&format!("request_device failed: {e}")))?; // [2](https://docs.rs/wgpu/latest/wgpu/enum.SurfaceTarget.html)
+
+    let caps = surface.get_capabilities(&adapter); // formats, present/alpha/present_modes. [1](https://webgpu-native.github.io/webgpu-headers/Surfaces.html)
+    let format = caps
+        .formats
+        .iter()
+        .copied()
+        .find(|f| matches!(f, TextureFormat::Bgra8UnormSrgb | TextureFormat::Rgba8UnormSrgb))
+        .unwrap_or_else(|| caps.formats[0]);
+    let present_mode = if caps.present_modes.contains(&PresentMode::AutoVsync) {
+        PresentMode::AutoVsync
+    } else {
+        PresentMode::Fifo
+    }; // Fifo is always supported; Auto* gracefully falls back. [3](https://docs.rs/wgpu/latest/wgpu/)
+    let alpha_mode = caps
+        .alpha_modes
+        .iter()
+        .copied()
+        .find(|m| *m == CompositeAlphaMode::Opaque)
+        .unwrap_or(caps.alpha_modes[0]);
+
+    let width = canvas.width().max(1);
+    let height = canvas.height().max(1);
+
+    let config = SurfaceConfiguration {
+        usage: TextureUsages::RENDER_ATTACHMENT,
+        format,
+        width,
+        height,
+        present_mode,
+        desired_maximum_frame_latency: 2,
+        alpha_mode,
+        view_formats: vec![],
+    }; // Fields per current docs. [4](https://github.com/gfx-rs/wgpu/issues/5661)
+
+    surface.configure(&device, &config); // [1](https://webgpu-native.github.io/webgpu-headers/Surfaces.html)
+
+    Ok(WgpuContext {
+        canvas,
+        surface,
+        device,
+        queue,
+        config,
+    })
 }

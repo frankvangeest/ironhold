@@ -1,11 +1,11 @@
-/**
- * path: /apps/editor_web/src/lib.rs
- * description: Web-based editor application using eframe and WASM.
- */
+// /**
+//  * path: /apps/editor_web/src/lib.rs
+//  * description: Web-based editor application using eframe and WASM.
+//  */
 
 // Only compile this file’s content on wasm32:
-#![cfg(target_arch = "wasm32")]
 
+#![cfg(target_arch = "wasm32")]
 use eframe::egui;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;

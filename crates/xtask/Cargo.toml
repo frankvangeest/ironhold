@@ -11,6 +11,8 @@ edition = "2021"
 [dependencies]
 clap = { version = "4", features = ["derive"] }
 tiny_http = "0.12"
-ws = "0.9"                # light WS server
 notify = "6"              # for hot reload later (native watch)
 walkdir = "2"             # for file traversal
+
+[target.'cfg(not(windows))'.dependencies]
+ws = "0.9"                # light WS server

@@ -5,6 +5,7 @@
  */
 
 pub mod wgpu_init;
+pub use wgpu_init::WgpuContext;
 
 use wasm_bindgen::prelude::*;
 use web_sys::{WebSocket, MessageEvent};

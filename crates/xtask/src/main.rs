@@ -129,12 +129,22 @@ fn respond_static_server(port: u16) {
 }
 
 fn ws_thread(port: u16) {
-    // very simple echo WS (place-holder for hot reload)
-    let addr = format!("127.0.0.1:{}", port + 1);
-    println!("WS listening on ws://{addr}/ws");
-    std::thread::spawn(move || {
-        ws::listen(addr, |out| move |msg| out.send(msg)).expect("ws listen");
-    });
+    // Non-Windows: real echo WS (placeholder for hot-reload)
+    #[cfg(not(windows))]
+    {
+        let addr = format!("127.0.0.1:{}", port + 1);
+        println!("WS listening on ws://{addr}/ws");
+        std::thread::spawn(move || {
+            // Echo server
+            ws::listen(addr, |out| move |msg| out.send(msg)).expect("ws listen");
+        });
+    }
+
+    // Windows: stub (avoid ws+miow)
+    #[cfg(windows)]
+    {
+        println!("WS disabled on Windows for now (using stub).");
+    }
 }
 
 /// Return true if path should be skipped (build outputs, VCS, etc.)
