@@ -128,6 +128,38 @@ fn respond_static_server(port: u16) {
     }
 }
 
+fn run_bindgen(debug: bool) {
+    // Pick debug or release output wasm path
+    let (profile_dir, msg) = if debug { ("debug", "debug") } else { ("release", "release") };
+    let wasm_path = format!("target/wasm32-unknown-unknown/{}/engine_wasm_api.wasm", profile_dir);
+
+    // Ensure wasm exists (build if not)
+    if !std::path::Path::new(&wasm_path).exists() {
+        run_build("engine_wasm_api", !debug);
+    }
+
+    // Create output dir: web/engine-npm/dist
+    let out_dir = "web/engine-npm/dist";
+    let _ = std::fs::create_dir_all(out_dir);
+
+    // Run wasm-bindgen
+    let status = Command::new("wasm-bindgen")
+        .args([
+            "--target","web",
+            "--no-typescript",
+            "--out-dir", out_dir,
+            &wasm_path,
+        ])
+        .status()
+        .expect("spawn wasm-bindgen");
+    if !status.success() {
+        eprintln!("wasm-bindgen failed for {msg} wasm");
+        std::process::exit(status.code().unwrap_or(1));
+    }
+}
+
+
+
 fn ws_thread(port: u16) {
     // Non-Windows: real echo WS (placeholder for hot-reload)
     #[cfg(not(windows))]
@@ -252,6 +284,7 @@ fn main() {
             // build wasm targets (debug)
             run_build("engine_wasm_api", false);
             run_build("editor_web", false);
+            run_bindgen(true); // bindgen the debug wasm
 
             // start ws + server
             ws_thread(port);
@@ -259,6 +292,7 @@ fn main() {
         }
         Cmd::BuildWeb => {
             run_build("engine_wasm_api", true);
+            run_bindgen(false); // bindgen the release wasm
             println!("(stub) run wasm-bindgen/wasm-opt and copy to web/engine-npm/dist");
         }
         Cmd::BundleEditor => {

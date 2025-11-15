@@ -210,10 +210,11 @@ impl Engine {
                     resolve_target: None,
                     ops: wgpu::Operations {
                         // Pick any color you like:
-                        load: wgpu::LoadOp::Clear(wgpu::Color {
-                            r: 0.12,
-                            g: 0.12,
-                            b: 0.16,
+                        load: wgpu::LoadOp::Clear(wgpu::Color {  
+                            // Sky blue
+                            r: 135.0/255.0, // ~0.529
+                            g: 206.0/255.0, // ~0.808
+                            b: 235.0/255.0, // ~0.922
                             a: 1.0,
                         }),
                         store: StoreOp::Store,

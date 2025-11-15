@@ -1,17 +1,67 @@
-
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
+    <title>Ironhold Editor (Web)</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Ironhold Editor</title>
-    <link rel="stylesheet" href="/static/editor.css" />
+    <link rel="icon">
+    <style>
+      html, body { height: 100%; margin: 0; background: #1b1b1b; }
+      /* Fill the page; let JS set the device-pixel canvas size */
+      #editor_canvas {
+        display: block;
+        width: 100vw;
+        height: 100vh;
+        outline: none;
+      }
+      /* You can add your egui/eframe overlay styles here if needed */
+    </style>
   </head>
   <body>
-    <header>
-      <h1>Ironhold - Web Editor</h1>
-    </header>
     <canvas id="editor_canvas"></canvas>
+
+    <script type="module">
+      // 1) Import the wasm module produced by wasm-bindgen.
+      //    We import the *loader* as `initWasm` (default export) and our engine API separately.
+      import initWasm, { init as initEngine, EngineOptions } from "/pkg/engine_wasm_api.js";
+
+      // 2) Fit the canvas to physical pixels (for crisp rendering).
+      function resizeCanvasToDevicePixelRatio(canvas) {
+        const dpr = window.devicePixelRatio || 1;
+        const cssW = canvas.clientWidth;
+        const cssH = canvas.clientHeight;
+        const wantW = Math.max(1, Math.floor(cssW * dpr));
+        const wantH = Math.max(1, Math.floor(cssH * dpr));
+        if (canvas.width !== wantW || canvas.height !== wantH) {
+          canvas.width = wantW;
+          canvas.height = wantH;
+        }
+      }
+
+      async function main() {
+        // Load/initialize the wasm file.
+        await initWasm();
+
+        const canvasId = "editor_canvas";
+        const canvas = document.getElementById(canvasId);
+        resizeCanvasToDevicePixelRatio(canvas);
+        window.addEventListener("resize", () => resizeCanvasToDevicePixelRatio(canvas));
+
+        // 3) Create options → init Engine (Rust), mount WebGPU, and start the loop.
+        const opts = new EngineOptions().canvas_id(canvasId);
+        const engine = await initEngine(opts);
+
+        await engine.mount_async();   // WebGPU device/queue/surface + configure
+        engine.set_play_mode(true);   // Optional toggle (Edit/Play)
+        engine.start();               // Starts requestAnimationFrame loop
+      }
+
+      main().catch((e) => {
+        console.error("Ironhold bootstrap failed:", e);
+        const el = document.getElementById("editor_canvas");
+        if (el) el.insertAdjacentHTML("afterend", `<pre style="color:#e66">Bootstrap error: ${String(e)}</pre>`);
+      });
+    </script>
     <noscript>This app requires JavaScript and WebGPU. If WebGPU is not available, a message will appear.</noscript>
   </body>
 </html>
