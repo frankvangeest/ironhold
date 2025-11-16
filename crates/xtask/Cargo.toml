@@ -13,6 +13,10 @@ clap = { version = "4", features = ["derive"] }
 tiny_http = "0.12"
 notify = "6"              # for hot reload later (native watch)
 walkdir = "2"             # for file traversal
+serde = { version = "1", features = ["derive"] }    # for build stamp
+serde_json = "1"                                    # for build stamp
+chrono = { version = "0.4", features = ["clock"] }  # for build stamp
+
 
 [target.'cfg(not(windows))'.dependencies]
 ws = "0.9"                # light WS server

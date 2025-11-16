@@ -74,12 +74,23 @@ pub async fn init_wgpu(canvas: HtmlCanvasElement) -> Result<WgpuContext, JsValue
         .await
         .ok_or_else(|| JsValue::from_str("No suitable WebGPU adapter found"))?;
 
+    let required_limits = {
+        // Prefer web‑portable presets on WASM:
+        // - downlevel_defaults(): safe baseline for WebGPU
+        // - downlevel_webgl2_defaults(): even stricter (if you target older GPUs)
+        #[cfg(target_arch = "wasm32")]
+        { Limits::downlevel_defaults() }
+
+        #[cfg(not(target_arch = "wasm32"))]
+        { Limits::default() } // or adapter.limits() with tweaks
+    };
+
     let (device, queue) = adapter
         .request_device(
             &DeviceDescriptor {
                 label: Some("ironhold_device"),
                 required_features: Features::empty(),
-                required_limits: Limits::default(),
+                required_limits: required_limits,
             },
             None,
         )

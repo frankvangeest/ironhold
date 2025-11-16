@@ -15,6 +15,18 @@ use std::rc::Rc;
 use platform_web::WgpuContext;
 use wgpu::{StoreOp};
 
+// Build info functions
+fn build_id() -> &'static str {
+    option_env!("IRONHOLD_BUILD_ID").unwrap_or("unknown")
+}
+fn build_sha() -> &'static str {
+    option_env!("IRONHOLD_GIT_SHA").unwrap_or("unknown")
+}
+fn build_time() -> &'static str {
+    option_env!("IRONHOLD_BUILD_TIME").unwrap_or("unknown")
+}
+
+
 #[wasm_bindgen]
 pub struct Engine {
     app: EngineApp,
@@ -61,6 +73,14 @@ impl EngineOptions {
 #[wasm_bindgen]
 pub async fn init(opts: EngineOptions) -> Result<Engine, JsValue> {
     console_error_panic_hook::set_once();
+
+    // Log build info
+    web_sys::console::log_1(
+        &format!(
+            "Ironhold build {} ({} @ {})",
+            build_id(), build_sha(), build_time()
+        ).into()
+    );
 
     let mut canvas: Option<HtmlCanvasElement> = None;
     if let Some(id) = opts.canvas_id.clone() {

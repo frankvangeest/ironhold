@@ -7,6 +7,7 @@
 use clap::{Parser, Subcommand};
 use std::{env, fs, io::Write, path::{Path, PathBuf}, process::Command};
 use walkdir::WalkDir;
+use serde::Serialize;
 
 #[derive(Parser)]
 #[command(name = "xtask")]
@@ -14,6 +15,15 @@ struct XTask {
     #[command(subcommand)]
     cmd: Cmd,
 }
+
+
+#[derive(Clone, Serialize)]
+struct BuildStamp {
+    id: String,      // e.g., "v0.1.0-23-gabc1234" or "abc1234-dirty"
+    git_sha: String, // short SHA
+    when_utc: String // RFC3339
+}
+
 
 #[derive(Subcommand)]
 enum Cmd {
@@ -46,6 +56,49 @@ fn ensure_wasm_js_rustflags(mut current: String) -> String {
     current
 }
 
+
+fn build_stamp_from_git() -> BuildStamp {
+    // Prefer: git describe --always --dirty --tags
+    let describe = std::process::Command::new("git")
+        .args(["describe", "--always", "--dirty", "--tags"])
+        .output()
+        .ok()
+        .and_then(|o| String::from_utf8(o.stdout).ok())
+        .map(|s| s.trim().to_string());
+
+    // Fallback: short SHA
+    let short_sha = std::process::Command::new("git")
+        .args(["rev-parse", "--short", "HEAD"])
+        .output()
+        .ok()
+        .and_then(|o| String::from_utf8(o.stdout).ok())
+        .map(|s| s.trim().to_string());
+
+    let id = describe.clone()
+        .or_else(|| short_sha.clone())
+        .unwrap_or_else(|| "nogit".into());
+
+    let git_sha = short_sha.unwrap_or_else(|| "nogit".into());
+
+    let when_utc = chrono::Utc::now().to_rfc3339();
+
+    BuildStamp { id, git_sha, when_utc }
+}
+
+fn materialize_build_json(stamp: &BuildStamp) {
+    let json = serde_json::to_vec_pretty(stamp).expect("serialize build.json");
+    std::fs::create_dir_all("web/static").ok();
+    std::fs::write("web/static/build.json", json).expect("write build.json");
+}
+
+fn print_build_to_cli(stamp: &BuildStamp) {
+    println!(
+        "Ironhold build {}  sha={}  time={}",
+        stamp.id, stamp.git_sha, stamp.when_utc
+    );
+}
+
+
 fn run_build(target_pkg: &str, release: bool) {
     let rf = env::var("RUSTFLAGS").unwrap_or_default();
     let rf = ensure_wasm_js_rustflags(rf);
@@ -63,6 +116,14 @@ fn run_build(target_pkg: &str, release: bool) {
 fn respond_static_server(port: u16) {
     use tiny_http::{Server, Response, Method, StatusCode, Header, Request};
     use std::str::FromStr;
+
+    fn add_build_header(mut resp: tiny_http::Response<std::io::Cursor<Vec<u8>>>) -> tiny_http::Response<std::io::Cursor<Vec<u8>>> {
+        if let Ok(id) = std::env::var("IRONHOLD_BUILD_ID") {
+            let hdr = Header::from_bytes("X-Ironhold-Build", id).unwrap();
+            resp.add_header(hdr);
+        }
+        resp
+    }
 
     fn respond_not_found(req: Request) {
         let _ = req.respond(
@@ -83,6 +144,7 @@ fn respond_static_server(port: u16) {
                     "ron"  => resp.add_header(Header::from_str("Content-Type: text/plain; charset=utf-8").unwrap()),
                     _ => {}
                 }
+                resp = add_build_header(resp);
                 let _ = req.respond(resp);
             }
             Err(_) => respond_not_found(req),
@@ -197,7 +259,14 @@ fn lang_for(ext: &str) -> &'static str {
         "rs"    => "rust",
         "toml"  => "toml",
         "md"    => "markdown",
-        "ron"   => "text", // not requested, but harmless if included later
+        // Web-facing assets
+        "html"  => "html",
+        "css"   => "css",
+        "js"    => "javascript",
+        "ts"    => "typescript",   // if you later add TypeScript
+        "json"  => "json",
+        "ron"   => "text",         // keep as plain text for now
+        // Other or unknown
         _       => "text",
     }
 }
@@ -223,8 +292,15 @@ fn export_sources(out_path: &str) -> std::io::Result<()> {
             continue;
         }
 
-        let ext = path.extension().and_then(|s| s.to_str()).unwrap_or_default().to_ascii_lowercase();
-        let include = matches!(ext.as_str(), "md" | "rs" | "toml");
+        let ext = path
+            .extension()
+            .and_then(|s| s.to_str())
+            .unwrap_or_default()
+            .to_ascii_lowercase();
+        let include = matches!(
+            ext.as_str(), 
+            "md" | "rs" | "toml" | "html" | "css" | "js" | "ts" | "json" | "ron"
+        );
         if include {
             // Also skip files in skipped dirs (defensive)
             if path.components().any(|c| {
@@ -273,7 +349,7 @@ fn export_sources(out_path: &str) -> std::io::Result<()> {
         writeln!(out)?; // spacer line
     }
 
-    println!("Exported {} files into {}", files.len(), out_path);
+    println!("Exported {} files (md, rs, toml, html, css, js, ts, json, ron) into {}", files.len(), out_path);
     Ok(())
 }
 
@@ -281,6 +357,20 @@ fn main() {
     let args = XTask::parse();
     match args.cmd {
         Cmd::DevWeb { port } => {
+            // 1) compute stamp (stateless)
+            let stamp = build_stamp_from_git();
+            print_build_to_cli(&stamp);
+            materialize_build_json(&stamp);
+
+
+            // 2) propagate to child cargo builds so WASM crates can embed it
+            std::env::set_var("IRONHOLD_BUILD_ID", &stamp.id);
+            std::env::set_var("IRONHOLD_GIT_SHA", &stamp.git_sha);
+            std::env::set_var("IRONHOLD_BUILD_TIME", &stamp.when_utc);
+
+            // (optional but recommended) clear old bindgen output to avoid stale glue
+            let _ = std::fs::remove_dir_all("web/engine-npm/dist");
+
             // build wasm targets (debug)
             run_build("engine_wasm_api", false);
             run_build("editor_web", false);
