@@ -1,46 +1,43 @@
 # TODO / Next Sprint
 
 ## Must-have (to see a live viewport)
-
-1. **WebGPU init**
-   - Implement `platform_web::wgpu_init::init_wgpu` (adapter/device/queue/surface/config).
-   - Return context with `device`, `queue`, `surface`, `config`.
-
-2. **Engine mount + clear-color**
-   - `Engine::mount_async()` calls `init_wgpu`, stores fields.
-   - `tick()` acquires frame, clears to color, submits.
-
-3. **Bindgen & /pkg**
-   - `xtask build-web`: `wasm-bindgen --target web` for `engine_wasm_api.wasm`.
-   - Output to `web/engine-npm/dist/`; dev server serves `/pkg/*`.
-   - Update `apps/editor_web/index.html` to import `/pkg/engine_wasm_api.js` (temporary until npm publish).
-
-4. **Editor boot -> Engine**
-   - In the page, call:
+1. **WebGPU init** ✅
+   - `platform_web::wgpu_init::init_wgpu` implemented (Instance → Surface → Adapter → Device/Queue → configure).
+2. **Engine mount + clear-color** (IN PROGRESS)
+   - `Engine.mount_async()` calls `init_wgpu` ✅
+   - `tick()` clear-color path wired; **pending**: console errors prevent present on our current page.
+3. **Bindgen & /pkg** ✅ (manual)
+   - Manual `wasm-bindgen` step produces `/pkg/engine_wasm_api.js` and `.wasm`.
+   - **Next**: automate via `xtask build-web` and call it from `dev-web`.
+4. **Editor boot → Engine** ✅ (with errors)
+   - Page calls:
      ```js
-     await init();
-     const opts = new EngineOptions().canvas_id("editor_canvas");
-     const eng = await initEngine(opts);
+     await initWasm();
+     const eng = await initEngine(new EngineOptions().canvas_id("editor_canvas"));
      await eng.mount_async();
      eng.set_play_mode(true);
      eng.start();
      ```
+   - **Next**: resolve console errors; confirm canvas clear to sky blue.
 
 ## Nice-to-have (short)
-
 5. **Hot reload WS**
-   - Watch `/assets` in `xtask` and broadcast `{type:"asset-changed", url}`.
-   - Engine/editor listens and calls `engine.hot_reload_asset(url)`.
-
+   - Windows: WS thread **disabled** (miow/`ws` crate crash). Keep HTTP server only.
+   - **Next**: replace `ws` crate with `tokio-tungstenite` (cross-platform), or keep stub until later.
 6. **Editor viewport texture**
-   - Render engine into texture and show in egui CentralPanel (egui_wgpu path).
+   - After base clear works, render to a texture and show inside egui panel.
+
+## Next Session (bugs to fix)
+- Favicon still 404 at `http://127.0.0.1:5173/` → adopt `/static/` mapping as documented.
+- Console errors on the editor page → root-cause and fix (likely import path, timing, or missing bindgen artifacts).
+- Confirm surface acquire/present path runs; canvas should clear to **sky blue**.
+- Optional: implement `xtask run_bindgen(debug: bool)` and call from `dev-web`.
 
 7. **Scene authoring roundtrip**
    - Minimal `Scene` RON with one sprite/mesh; load & display.
 
 ## Later
 
-- NPM packaging variants (`/2d`, `/3d`, `/full`).
 - Portable Windows editor & host apps.
 - Asset pipeline & importers (GLTF → internal).
 - Reflection + inspector & undo/redo.

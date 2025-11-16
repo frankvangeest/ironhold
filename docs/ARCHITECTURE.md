@@ -45,3 +45,9 @@ Currently exported from `engine_wasm_api` (subject to iteration):
 
 - Expose a **coarse-grained** JS API (avoid thousands of tiny calls). Scenes/assets loaded as blobs/strings.
 - `wasm-bindgen` will produce `*.js` glue + `*.wasm`; `xtask build-web` will run bindgen, then serve result under `/pkg`.
+ 
+
+**Implementation status (2025-11-13)**  
+> - WebGPU init path implemented (WASM/web).  
+> - Engine mount wired; clear-color path present but blocked by current page JS errors.  
+> - Dev server serves `/pkg/*` from bindgen output; WS stubbed on Windows.

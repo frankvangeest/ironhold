@@ -54,3 +54,19 @@ See more in `docs/ARCHITECTURE.md`.
 ## License
 Dual licensed under MIT and Apache 2.0.
 Any assets in this repo fall under CC0 (public domain) or CC BY (give credit to creator).
+
+## Current Status (2025-11-13)
+
+- ✅ Dev server starts on `http://127.0.0.1:5173` (WS echo stubbed/disabled on Windows).
+- ✅ `engine_wasm_api` builds to `wasm32-unknown-unknown` and `wasm-bindgen` outputs `/pkg/engine_wasm_api.js`.
+- ✅ Editor page imports `/pkg/engine_wasm_api.js` and calls the engine bootstrap.
+- ⚠️ Favicon: `/favicon.ico` returns 404 at the site root; see `docs/BUILD.md` for a quick fix.
+- ⚠️ Browser shows multiple console errors; the canvas does **not** yet clear to sky blue. We’ll address these next.
+
+### Quick Start (dev)
+```bat
+cargo run -p xtask -- dev-web
+```
+Open `http://127.0.0.1:5173`.
+
+> If `/pkg/engine_wasm_api.js` is missing, run the `wasm-bindgen` step described in `docs/BUILD.md`, or use the automated `xtask build-web` (planned) that runs bindgen for you.
