@@ -79,7 +79,8 @@ pub async fn init_wgpu(canvas: HtmlCanvasElement) -> Result<WgpuContext, JsValue
         // - downlevel_defaults(): safe baseline for WebGPU
         // - downlevel_webgl2_defaults(): even stricter (if you target older GPUs)
         #[cfg(target_arch = "wasm32")]
-        { Limits::downlevel_defaults() }
+        // { Limits::downlevel_defaults() }
+        { Limits::downlevel_webgl2_defaults() }
 
         #[cfg(not(target_arch = "wasm32"))]
         { Limits::default() } // or adapter.limits() with tweaks

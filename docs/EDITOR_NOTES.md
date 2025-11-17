@@ -24,9 +24,4 @@ eng.start();
 ```
 Make sure `/pkg/engine_wasm_api.js` exists (see `docs/BUILD.md` → bindgen).
 
-## Favicon
-Place `web/static/favicon.ico` and add:
-```html
-<link rel="icon" href="/static/favicon.ico" />
-```
-The dev server maps `/static/*` to `web/static/*`; `/favicon.ico` at root is currently unmapped.
+

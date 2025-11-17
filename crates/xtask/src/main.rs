@@ -169,6 +169,12 @@ fn respond_static_server(port: u16) {
             continue;
         }
 
+        if method == Method::Get && url == "/favicon.ico" {
+            let path = PathBuf::from("apps/editor_web/favicon.ico");
+            respond_file(req, path);
+            continue;
+        }
+
         let (base, strip) = if url.starts_with("/static/") {
             ("web/static", "/static/")
         } else if url.starts_with("/assets/") {

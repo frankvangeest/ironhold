@@ -18,7 +18,15 @@ A web-first Rust game engine **library** (prebuilt to WebAssembly and usable fro
 ## Workspace Structure (web-first)
 - apps/
   - editor_web/           # Browser editor shell (egui/eframe)
+    - src
+      - lib.rs
+    - Cargo.toml
+    - index.html
+    - favicon.ico
   - host_web/             # Minimal host sample (future)
+    - src
+      - lib.rs
+    - Cargo.toml
 - assets/
 - crates/
   - editor_core/          # editor model (selection/cmd/undo) stub
@@ -32,20 +40,30 @@ A web-first Rust game engine **library** (prebuilt to WebAssembly and usable fro
   - engine_ui/            # retained-mode game UI (taffy) stub
   - engine_wasm_api/      # wasm-bindgen JS API facade (prebuilt lib)
   - platform_web/         # WASM bindings; WebGPU init; WS hooks
+    - src
+      - lib.rs
+      - wgpu_init.rs
+    - Cargo.toml
   - xtask/                # dev server, build/bundle tasks
+    - src
+      - main.rs
+    - Cargo.toml
 - docs/
-  - ARCHITECTURE.md
-  - BUILD.md
-  - EDITOR_NOTES.md
-  - TODO.md
-  - TROUBLESHOOTING.md
-  - WEBGPU_SETUP.md
+  - ARCHITECTURE.md       # Project architecture and design choices
+  - BUILD.md              # How to build the project and prereqs
+  - EDITOR_NOTES.md       # Things that need remembering when developing the editor
+  - TODO.md               # Task and task progress
+  - TROUBLESHOOTING.md    # Solutions to issues to things we have already solved
+  - WEBGPU_SETUP.md       # The wgpu flow we use
 - web/
   - engine-npm/           # npm packaging skeleton
   - static/               # editor CSS, etc.
 - README.md
 - Cargo.toml              # Root Cargo file
-- LICENSE                 # Dual MIT and Apache license
+- config.toml             # "getrandom_backend=\"wasm_js\"", target = "wasm32-unknown-unknown"
+- rust-toolchain.toml     # stable
+- LICENSE-APACHE          # Dual MIT and Apache license
+- LICENSE-MIT             # Dual MIT and Apache license
 
 
 See more in `docs/ARCHITECTURE.md`.
@@ -60,7 +78,6 @@ Any assets in this repo fall under CC0 (public domain) or CC BY (give credit to 
 - ✅ Dev server starts on `http://127.0.0.1:5173` (WS echo stubbed/disabled on Windows).
 - ✅ `engine_wasm_api` builds to `wasm32-unknown-unknown` and `wasm-bindgen` outputs `/pkg/engine_wasm_api.js`.
 - ✅ Editor page imports `/pkg/engine_wasm_api.js` and calls the engine bootstrap.
-- ⚠️ Favicon: `/favicon.ico` returns 404 at the site root; see `docs/BUILD.md` for a quick fix.
 - ⚠️ Browser shows multiple console errors; the canvas does **not** yet clear to sky blue. We’ll address these next.
 
 ### Quick Start (dev)

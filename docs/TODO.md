@@ -28,7 +28,6 @@
    - After base clear works, render to a texture and show inside egui panel.
 
 ## Next Session (bugs to fix)
-- Favicon still 404 at `http://127.0.0.1:5173/` → adopt `/static/` mapping as documented.
 - Console errors on the editor page → root-cause and fix (likely import path, timing, or missing bindgen artifacts).
 - Confirm surface acquire/present path runs; canvas should clear to **sky blue**.
 - Optional: implement `xtask run_bindgen(debug: bool)` and call from `dev-web`.
