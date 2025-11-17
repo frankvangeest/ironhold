@@ -30,15 +30,45 @@ A web-first Rust game engine **library** (prebuilt to WebAssembly and usable fro
 - assets/
 - crates/
   - editor_core/          # editor model (selection/cmd/undo) stub
+    - src
+      - lib.rs
+    - Cargo.toml
   - editor_ui/            # egui panels (inspector, hierarchy) stub
+    - src
+      - lib.rs
+    - Cargo.toml
   - engine_assets/        # assets + RON + hot-reload hooks
+    - src
+      - lib.rs
+    - Cargo.toml
   - engine_core/          # ECS app, edit/play schedules
+    - src
+      - lib.rs
+    - Cargo.toml
   - engine_ecs/           # Re-exports ECS utilities (lean)
+    - src
+      - lib.rs
+    - Cargo.toml
   - engine_input/         # input abstraction (stub)
+    - src
+      - lib.rs
+    - Cargo.toml
   - engine_render/        # wgpu renderer (to implement)
+    - src
+      - lib.rs
+    - Cargo.toml
   - engine_scene/         # scene types + serde/RON
+    - src
+      - lib.rs
+    - Cargo.toml
   - engine_ui/            # retained-mode game UI (taffy) stub
+    - src
+      - lib.rs
+    - Cargo.toml
   - engine_wasm_api/      # wasm-bindgen JS API facade (prebuilt lib)
+    - src
+      - lib.rs
+    - Cargo.toml
   - platform_web/         # WASM bindings; WebGPU init; WS hooks
     - src
       - lib.rs
