@@ -29,3 +29,18 @@ The `ws` crate (0.9) relies on `miow` on Windows. `miow` is effectively unmainta
 
 ### Fix
 Disable WS on Windows (stub) and keep HTTP server. For cross-platform WS, replace `ws` with `tokio + tokio-tungstenite` later.
+
+---
+
+## Editor Web OperationError: Failed to execute 'requestDevice' on 'GPUAdapter': The limit "maxInterStageShaderComponents" with a non-undefined value is not recognized.
+
+### Symptom
+When using the build wasm library. The adapter.request_device call would fail. Changing Limits::default() to Limits::downlevel_defaults() or Limits::downlevel_webgl2_defaults() did not work. Changing limits to adapter.limits() did not work.
+
+### Cause
+wgpu version 0.20 was outdated. maxInterStageShaderComponents is no long supported by the latest browsers.
+
+### Fix
+Updated to wgpu 27. The newer version of wgpu also has new versions of the various limit defaults.
+
+---

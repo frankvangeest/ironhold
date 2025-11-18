@@ -3,9 +3,9 @@
 ## Must-have (to see a live viewport)
 1. **WebGPU init** ✅
    - `platform_web::wgpu_init::init_wgpu` implemented (Instance → Surface → Adapter → Device/Queue → configure).
-2. **Engine mount + clear-color** (IN PROGRESS)
+2. **Engine mount + clear-color** ✅
    - `Engine.mount_async()` calls `init_wgpu` ✅
-   - `tick()` clear-color path wired; **pending**: console errors prevent present on our current page.
+   - `tick()` clear-color path wired; canvas clears to sky blue.
 3. **Bindgen & /pkg** ✅ (manual)
    - Manual `wasm-bindgen` step produces `/pkg/engine_wasm_api.js` and `.wasm`.
    - **Next**: automate via `xtask build-web` and call it from `dev-web`.
@@ -18,7 +18,9 @@
      eng.set_play_mode(true);
      eng.start();
      ```
-   - **Next**: resolve console errors; confirm canvas clear to sky blue.
+   - **Next**: resolve console errors;
+      panicked at crates\engine_wasm_api\src\lib.rs:159:35:
+      RefCell already borrowed
 
 ## Nice-to-have (short)
 5. **Hot reload WS**
@@ -28,8 +30,8 @@
    - After base clear works, render to a texture and show inside egui panel.
 
 ## Next Session (bugs to fix)
-- Console errors on the editor page → root-cause and fix (likely import path, timing, or missing bindgen artifacts).
-- Confirm surface acquire/present path runs; canvas should clear to **sky blue**.
+- Console errors on the editor page → root-cause and fix.
+- Canvas should render a texture.
 - Optional: implement `xtask run_bindgen(debug: bool)` and call from `dev-web`.
 
 7. **Scene authoring roundtrip**

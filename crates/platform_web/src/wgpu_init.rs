@@ -36,7 +36,6 @@ impl rwh::HasWindowHandle for CanvasHandle {
         let obj: std::ptr::NonNull<std::ffi::c_void> = std::ptr::NonNull::from(js_value).cast();
         let web_canvas = rwh::WebCanvasWindowHandle::new(obj);
         let raw = rwh::RawWindowHandle::from(web_canvas);
-        // 1-arg form on the version bundled with wgpu 0.20.x
         let handle = unsafe { rwh::WindowHandle::borrow_raw(raw) };
         Ok(handle)
     }
@@ -53,10 +52,11 @@ impl rwh::HasDisplayHandle for CanvasHandle {
 
 /// Initialize WebGPU/WGPU for the given canvas.
 pub async fn init_wgpu(canvas: HtmlCanvasElement) -> Result<WgpuContext, JsValue> {
-    let instance = Instance::new(InstanceDescriptor {
+    let instance_descriptor = InstanceDescriptor {
         backends: Backends::all(),
         ..Default::default()
-    }); // Instance is the entry point. [2](https://docs.rs/wgpu/latest/wgpu/enum.SurfaceTarget.html)
+    };
+    let instance = Instance::new(&instance_descriptor); // Instance is the entry point. [2](https://docs.rs/wgpu/latest/wgpu/enum.SurfaceTarget.html)
 
     // LEAK the handle to get an &'static CanvasHandle (surface needs 'static)
     let target_ref: &'static CanvasHandle = Box::leak(Box::new(CanvasHandle::new(canvas.clone())));
@@ -72,28 +72,30 @@ pub async fn init_wgpu(canvas: HtmlCanvasElement) -> Result<WgpuContext, JsValue
             force_fallback_adapter: false,
         })
         .await
-        .ok_or_else(|| JsValue::from_str("No suitable WebGPU adapter found"))?;
+        .map_err(|e| JsValue::from_str(&format!("Failed to request WebGPU adapter: {:?}", e)))?;
 
-    let required_limits = {
-        // Prefer web‑portable presets on WASM:
-        // - downlevel_defaults(): safe baseline for WebGPU
-        // - downlevel_webgl2_defaults(): even stricter (if you target older GPUs)
-        #[cfg(target_arch = "wasm32")]
-        // { Limits::downlevel_defaults() }
-        { Limits::downlevel_webgl2_defaults() }
+    let required_limits = adapter.limits(); // Get supported limits
+    // let required_limits = {
+    //     // Prefer web‑portable presets on WASM:
+    //     // - downlevel_defaults(): safe baseline for WebGPU
+    //     // - downlevel_webgl2_defaults(): even stricter (if you target older GPUs)
+    //     #[cfg(target_arch = "wasm32")]
+    //     // { Limits::downlevel_defaults() }
+    //     { wgpu::Limits::downlevel_webgl2_defaults() }
 
-        #[cfg(not(target_arch = "wasm32"))]
-        { Limits::default() } // or adapter.limits() with tweaks
-    };
+    //     #[cfg(not(target_arch = "wasm32"))]
+    //     { wgpu::Limits::default() } // or adapter.limits() with tweaks
+    // };
 
     let (device, queue) = adapter
         .request_device(
-            &DeviceDescriptor {
+            &wgpu::DeviceDescriptor {
                 label: Some("ironhold_device"),
-                required_features: Features::empty(),
+                required_features: wgpu::Features::empty(),
                 required_limits: required_limits,
-            },
-            None,
+                memory_hints: wgpu::MemoryHints::Performance,
+                ..Default::default()
+            }
         )
         .await
         .map_err(|e| JsValue::from_str(&format!("request_device failed: {e}")))?; // [2](https://docs.rs/wgpu/latest/wgpu/enum.SurfaceTarget.html)

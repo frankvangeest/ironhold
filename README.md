@@ -108,7 +108,8 @@ Any assets in this repo fall under CC0 (public domain) or CC BY (give credit to 
 - ✅ Dev server starts on `http://127.0.0.1:5173` (WS echo stubbed/disabled on Windows).
 - ✅ `engine_wasm_api` builds to `wasm32-unknown-unknown` and `wasm-bindgen` outputs `/pkg/engine_wasm_api.js`.
 - ✅ Editor page imports `/pkg/engine_wasm_api.js` and calls the engine bootstrap.
-- ⚠️ Browser shows multiple console errors; the canvas does **not** yet clear to sky blue. We’ll address these next.
+- ✅ Editor page canvas does clear to sky blue.
+- ⚠️ Browser shows multiple console errors;  We’ll address these next. See TODO.md.
 
 ### Quick Start (dev)
 ```bat
@@ -116,4 +117,4 @@ cargo run -p xtask -- dev-web
 ```
 Open `http://127.0.0.1:5173`.
 
-> If `/pkg/engine_wasm_api.js` is missing, run the `wasm-bindgen` step described in `docs/BUILD.md`, or use the automated `xtask build-web` (planned) that runs bindgen for you.
+> If `/pkg/engine_wasm_api.js` is missing, run the `wasm-bindgen` step described in `docs/BUILD.md`, or use the automated `xtask build-web` that runs bindgen for you.

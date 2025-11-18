@@ -11,5 +11,5 @@ edition = "2021"
 [dependencies]
 egui = "0.29"
 engine_core = { path = "../engine_core" }
-# wgpu = "0.20"
+# wgpu = "27.0"
 # thiserror = "1"

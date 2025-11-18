@@ -227,6 +227,7 @@ impl Engine {
                 label: Some("ironhold_clear_pass"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                     view: &view,
+                    depth_slice: None,
                     resolve_target: None,
                     ops: wgpu::Operations {
                         // Pick any color you like:
