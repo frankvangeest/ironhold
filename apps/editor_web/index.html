@@ -70,6 +70,7 @@
         await engine.mount_async();   // WebGPU device/queue/surface + configure
         engine.set_play_mode(true);   // Optional toggle (Edit/Play)
         engine.start();               // Starts requestAnimationFrame loop
+        engine.start_hot_reload();    // Starts hot-reload WebSocket listener
       }
 
       main().catch((e) => {

@@ -32,3 +32,17 @@ engine_render = { path = "../engine_render" }
 # ✅ For the browser target, enable getrandom's JS backend (uses crypto.getRandomValues)
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom = { version = "0.3", features = ["wasm_js"] }
+
+[features]
+# Individual features
+debug = []
+hot_reload = []
+styling = []
+
+# Composite Feature Set 1 (for developers)
+# Enables both debug and hot-reload
+dev = ["debug", "hot_reload"] 
+
+# Composite Feature Set 2 (for IDE/editor integration)
+# Enables both styling and hot-reload
+editor = ["styling", "hot_reload"]

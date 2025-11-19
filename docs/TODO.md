@@ -1,46 +1,62 @@
 # TODO / Next Sprint
 
-## Must-have (to see a live viewport)
-1. **WebGPU init** ✅
-   - `platform_web::wgpu_init::init_wgpu` implemented (Instance → Surface → Adapter → Device/Queue → configure).
-2. **Engine mount + clear-color** ✅
-   - `Engine.mount_async()` calls `init_wgpu` ✅
-   - `tick()` clear-color path wired; canvas clears to sky blue.
-3. **Bindgen & /pkg** ✅ (manual)
-   - Manual `wasm-bindgen` step produces `/pkg/engine_wasm_api.js` and `.wasm`.
-   - **Next**: automate via `xtask build-web` and call it from `dev-web`.
-4. **Editor boot → Engine** ✅ (with errors)
-   - Page calls:
-     ```js
-     await initWasm();
-     const eng = await initEngine(new EngineOptions().canvas_id("editor_canvas"));
-     await eng.mount_async();
-     eng.set_play_mode(true);
-     eng.start();
-     ```
-   - ✅ Fixed RefCell already borrowed panic by adopting Rc<RefCell<Option<Closure>>> pattern.
-   - ✅ Fixed WebGPU getCurrentTexture null context error by switching to SurfaceTarget::Canvas and adding proactive surface reconfigure logic.
+- Mark as **done**:
+  - WebGPU init ✅
+  - Engine mount + clear color ✅
+  - Bindgen + `/pkg` ✅
+  - Editor boot → Engine ✅
+  - **Proactive surface reconfigure** ✅
+  - **Basic render pipeline (triangle)** ✅
+  - **Hot reload WS client + cross‑platform WS server** ✅
+- **Next Steps**:
+  - Load a RON scene and render primitives/mesh.
+  - Tie `asset-changed` → fetch URL → parse (RON) → replace scene / asset.
+  - Introduce proper error overlays in the editor for reload failures.
 
 ## Next Steps
-- ✅ Implement automatic surface reconfigure on window resize and any acquire error.
-- ✅ Begin scene rendering pipeline inside editor viewport (currently placeholder clear).
-- Add hot-reload integration for assets and scenes.
+- Scene rendering from data:
+  - [ ] Minimal `Scene` RON w/ one quad/sprite; render in the pipeline
+  - [ ] Wire hot reload: on `asset-changed`, `fetch(url)` → parse RON → apply scene/asset
+  - [ ] Minimal `Scene` RON w/ one mesh; render in the pipeline
+- Editor:
+  - [ ] Viewport texture integration (render to texture, display in egui panel)
+  - [ ] Inspector stubs (once reflection lands)
 - Improve error logging and recovery for WebGPU edge cases.
 
 ## Nice-to-have (short)
-5. **Hot reload WS**
-   - Windows: WS thread **disabled** (miow/`ws` crate crash). Keep HTTP server only.
-   - **Next**: replace `ws` crate with `tokio-tungstenite` (cross-platform), or keep stub until later.
-6. **Editor viewport texture**
-   - After base clear works, render to a texture and show inside egui panel.
-
-7. **Scene authoring roundtrip**
-   - Minimal `Scene` RON with one sprite/mesh; load & display.
+**Broadcast asset-changed events on file changes**
+   - Wire the notify watcher in xtask to broadcast real asset-changed events on file changes. (So we don’t need a separate WS client for testing).
+**Partial project snapshot**
+   - Add an optional parameter to only include a list of files to the 'cargo run -p xtask -- export-sources' command. E.g. a comma seperated list [file.md,file2.rs,file3.toml]. Or something similar. Without the additional parameter is should still be have as it has before.
 
 ## Longer-Term Goals
 - Editor panels for scene graph and component editing.
 - Data-driven UI authoring using taffy.
-- Feature flags for physics and scripting.
-- Portable Windows editor & host apps.
 - Asset pipeline & importers (GLTF → internal).
 - Reflection + inspector & undo/redo.
+- Texture instancing
+- Model instancing
+- Portable Windows editor & host apps.
+- Feature flags for physics, networking and scripting.
+- WGSL shader rendered grass
+   - good looking interactive grass shader
+   - include character movement through the grass
+   - add wind_direction and wind_strength parameters and create a controllable wind effect
+   - add grass_color parameter to control the color of the grass
+- WGSL shader rendered water
+   - good looking interactive water shader
+   - include character movement through the water
+   - include dynamic wind effect
+- WGSL shader rendered sand (like in the game Journey)
+   - good looking interactive sand shader
+   - include character movement through the sand
+   - include dynamic wind effect
+- WGSL shader rendered snow
+   - good looking interactive snow shader
+   - include character movement through the snow
+   - include dynamic wind effect
+- Slime shader
+- Lava shader
+- Stone shader
+- Wood shader
+- efficient GPU physics

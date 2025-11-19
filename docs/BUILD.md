@@ -57,7 +57,7 @@ cargo run -p xtask -- export-sources
 
 ## Editor (eframe/web) specifics
 
-- Use `eframe = { version = "0.29", default-features = false, features = ["wgpu"] }`
+- Use `eframe = { version = "0.33", default-features = false, features = ["wgpu"] }`
 - `WebRunner` is under `eframe::web`, but **guard your file**:
   ```rust
   #![cfg(target_arch = "wasm32")]

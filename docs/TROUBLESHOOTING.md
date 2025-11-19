@@ -59,5 +59,27 @@ The WebGPU surface was created using raw-handle mapping instead of the Canvas pa
 
 ---
 
+# WebSocket fails to connect on Windows
+**Symptom**
+WebSocket connection to 'ws://127.0.0.1:5174/ws' failed
+
+**Cause**
+Old `ws` crate server wasn’t started on Windows.
+
+**Fix**
+Replaced with `tokio + tokio-tungstenite`; server runs on all platforms at `ws://127.0.0.1:(5173+1)/ws`.
+
+---
+
+## WS JSON parse error: missing field `url` for `{"type":"hello"}`
+
+**Symptom**
+`WS JSON parse error (text): missing field url => {"type":"hello"}`
+
+**Fix**
+Client now parses with a tagged enum (`type` field). `hello` is accepted and ignored.
+
+---
+
 
 

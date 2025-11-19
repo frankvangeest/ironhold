@@ -104,14 +104,12 @@ Dual licensed under MIT and Apache 2.0.
 Any assets in this repo fall under CC0 (public domain) or CC BY (give credit to creator).
 
 ## Current Status (2025-11-19)
-- ✅ Dev server starts on `http://127.0.0.1:5173` (WS echo stubbed/disabled on Windows).
-- ✅ `engine_wasm_api` builds to `wasm32-unknown-unknown` and `wasm-bindgen` outputs `/pkg/engine_wasm_api.js`.
-- ✅ Editor page imports `/pkg/engine_wasm_api.js` and calls the engine bootstrap.
-- ✅ Editor page canvas clears to sky blue.
-- ✅ Fixed major console errors:
-  - RefCell borrow panic in RAF loop.
-  - WebGPU null context error (`getCurrentTexture`).
-- ⚠️ Next: implement proactive surface reconfigure and begin scene rendering.
+- ✅ Dev server at `http://127.0.0.1:5173` (WS at `ws://127.0.0.1:5174/ws`)
+- ✅ `engine_wasm_api` builds; bindgen outputs `/pkg/engine_wasm_api.js`
+- ✅ Editor page imports engine and boots it
+- ✅ **Viewport clears to sky blue and renders a red triangle** via a basic `wgpu` pipeline
+- ✅ **Hot reload**: WS client + **cross‑platform** WS server (tokio‑tungstenite)
+- ⚠️ Next: begin scene rendering from data (RON), reload scenes on change
 
 ### Quick Start (dev)
 ```bat

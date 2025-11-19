@@ -7,4 +7,6 @@
 - Commit frequently with short messages tied to docs tasks (e.g., docs: add WEBGPU_SETUP / xtask: dev server & ws / engine_wasm_api: RAF loop).
 - Keep documentation and task progress up to date in the markdown files. (e.g. TODO.md)
 - When we have a succesfull build. We check if the documentation needs updating. 
-- When generating/updating markdown documantion files, just provide download links to the new files. 
+- When generating/updating markdown documantion files, provide download links to the new files. 
+- Dev WS server: prefer `tokio + tokio-tungstenite` over legacy `ws` crate (works on Windows).
+- WS payloads: use tagged enums (serde) instead of ad-hoc string splitting.

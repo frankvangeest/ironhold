@@ -13,7 +13,6 @@ use crate::js_sys::Date;
 use std::cell::RefCell;
 use std::rc::Rc;
 use platform_web::WgpuContext;
-use wgpu::{StoreOp};
 
 use engine_render::BasicPipeline;
 
@@ -200,6 +199,30 @@ impl Engine {
         }
         Ok(())
     }
+
+    // pub fn start_hot_reload() {
+    //     if let Some(ws) = platform_web::hotreload::start_ws("ws://127.0.0.1:5174/ws") {
+    //         let onmessage = Closure::wrap(Box::new(move |e: web_sys::MessageEvent| {
+    //             web_sys::console::log_1(&format!("HotReload message: {:?}", e.data()).into());
+    //         }) as Box<dyn FnMut(_)>);
+    //         ws.set_onmessage(Some(onmessage.as_ref().unchecked_ref()));
+    //         onmessage.forget();
+    //     } else {
+    //         web_sys::console::warn_1(&"HotReload WS not available".into());
+    //     }
+    // }
+    
+    /// Start the Hot Reload WebSocket and register a simple asset-changed handler.
+    #[wasm_bindgen]
+    pub fn start_hot_reload(&mut self) -> Result<(), JsValue> {
+        platform_web::start_hot_reload(|url: String| {
+            web_sys::console::log_1(
+                &format!("Hot reload: asset changed at {url}").into()
+            );
+            // TODO: integrate with engine_assets::hot_reload_stub(url);
+        })
+    }
+
 
     pub fn tick(&mut self, _dt_ms: f32) {
         self.app.update();

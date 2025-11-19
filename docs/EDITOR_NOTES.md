@@ -25,3 +25,11 @@ eng.start();
 Make sure `/pkg/engine_wasm_api.js` exists (see `docs/BUILD.md` → bindgen).
 
 
+### Viewport
+- The engine currently draws directly into the swapchain (clear + red triangle).
+- Later: render to a texture and show it inside an egui panel.
+
+### Hot reload
+- On dev server start, the editor connects to WS and logs `Hot reload WebSocket connected`.
+- When an asset change message arrives, it logs `Hot reload: asset changed at <url>`.
+- Next: fetch + apply the changed asset/scene.

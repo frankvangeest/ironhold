@@ -9,6 +9,18 @@ use std::{env, fs, io::Write, path::{Path, PathBuf}, process::Command};
 use walkdir::WalkDir;
 use serde::Serialize;
 
+// WebSocket server dependencies
+use futures_util::{SinkExt, StreamExt};
+use tokio::net::TcpListener;
+use tokio_tungstenite::{
+    accept_hdr_async,
+    tungstenite::{
+        protocol::Message,
+        handshake::server::{Request as WsRequest, Response as WsResponse},
+    },
+};
+
+
 #[derive(Parser)]
 #[command(name = "xtask")]
 struct XTask {
@@ -227,25 +239,95 @@ fn run_bindgen(debug: bool) {
 }
 
 
-
 fn ws_thread(port: u16) {
-    // Non-Windows: real echo WS (placeholder for hot-reload)
-    #[cfg(not(windows))]
-    {
-        let addr = format!("127.0.0.1:{}", port + 1);
-        println!("WS listening on ws://{addr}/ws");
-        std::thread::spawn(move || {
-            // Echo server
-            ws::listen(addr, |out| move |msg| out.send(msg)).expect("ws listen");
-        });
-    }
+    // The WS server listens on HTTP port + 1 (same convention as before)
+    let addr = format!("127.0.0.1:{}", port + 1);
+    println!("WS listening on ws://{}/ws", addr);
 
-    // Windows: stub (avoid ws+miow)
-    #[cfg(windows)]
-    {
-        println!("WS disabled on Windows for now (using stub). ws port would be {}", port);
-    }
+    std::thread::spawn(move || {
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_io()
+            .enable_time()
+            .build()
+            .expect("build tokio runtime");
+
+        rt.block_on(async move {
+            let listener = TcpListener::bind(&addr)
+                .await
+                .expect("bind WS addr");
+
+            loop {
+                let (stream, _peer) = match listener.accept().await {
+                    Ok(x) => x,
+                    Err(e) => {
+                        eprintln!("ws accept error: {e}");
+                        continue;
+                    }
+                };
+
+                // If you want to restrict to a specific path (e.g. /ws),
+                // you can parse req.uri() here and reject others.
+                let ws_stream = match accept_hdr_async(stream, |req: &WsRequest, resp: WsResponse| {
+                    // Optional logging:
+                    println!("WS handshake: {}", req.uri());
+                    Ok(resp)
+                })
+                .await
+                {
+                    Ok(s) => s,
+                    Err(e) => {
+                        eprintln!("ws handshake error: {e}");
+                        continue;
+                    }
+                };
+
+                tokio::spawn(async move {
+                    let (mut write, mut read) = ws_stream.split();
+
+                    // Optional greeting (useful to confirm the client connected)
+                    let _ = write
+                        .send(Message::Text(r#"{"type":"hello"}"#.into()))
+                        .await;
+
+                    while let Some(msg) = read.next().await {
+                        match msg {
+                            Ok(Message::Text(txt)) => {
+                                // Echo text
+                                if let Err(e) = write.send(Message::Text(txt)).await {
+                                    eprintln!("ws send error: {e}");
+                                    break;
+                                }
+                            }
+                            Ok(Message::Binary(bin)) => {
+                                // Echo binary
+                                if let Err(e) = write.send(Message::Binary(bin)).await {
+                                    eprintln!("ws send error: {e}");
+                                    break;
+                                }
+                            }
+                            Ok(Message::Ping(p)) => {
+                                let _ = write.send(Message::Pong(p)).await;
+                            }
+                            Ok(Message::Pong(_)) => {}
+                            Ok(Message::Close(frame)) => {
+                                let _ = write.send(Message::Close(frame)).await;
+                                break;
+                            }
+                            Ok(Message::Frame(_)) => {
+                                // Ignore raw frames
+                            }
+                            Err(e) => {
+                                eprintln!("ws read error: {e}");
+                                break;
+                            }
+                        }
+                    }
+                });
+            }
+        });
+    });
 }
+
 
 /// Return true if path should be skipped (build outputs, VCS, etc.)
 fn is_skipped_dir(p: &Path) -> bool {
