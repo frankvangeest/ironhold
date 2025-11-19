@@ -15,6 +15,8 @@ use std::rc::Rc;
 use platform_web::WgpuContext;
 use wgpu::{StoreOp};
 
+use engine_render::BasicPipeline;
+
 // Build info functions
 fn build_id() -> &'static str {
     option_env!("IRONHOLD_BUILD_ID").unwrap_or("unknown")
@@ -33,6 +35,7 @@ pub struct Engine {
     canvas: Option<HtmlCanvasElement>,
     gfx: Option<WgpuContext>,
     raf_handle: Option<std::rc::Rc<std::cell::RefCell<Option<wasm_bindgen::closure::Closure<dyn FnMut(f64)>>>>>,
+    pipeline: Option<BasicPipeline>,
     running: bool,
     last_ts: f64,
 }
@@ -42,7 +45,11 @@ impl Engine {
     pub async fn mount_async(&mut self) -> Result<(), JsValue> {
         let canvas = self.canvas.take().ok_or(JsValue::from_str("no canvas bound"))?;
         let gfx = platform_web::wgpu_init::init_wgpu(canvas).await?;
+        let pipeline = BasicPipeline::new(&gfx.device, &gfx.config);
+
+        self.pipeline = Some(pipeline);
         self.gfx = Some(gfx);
+
         Ok(())
     }
 }
@@ -93,6 +100,7 @@ pub async fn init(opts: EngineOptions) -> Result<Engine, JsValue> {
         canvas,
         gfx: None,
         raf_handle: None,
+        pipeline: None,
         running: false,
         last_ts: Date::now(), // milliseconds
     })
@@ -202,60 +210,53 @@ impl Engine {
         let frame = match gfx.surface.get_current_texture() {
             Ok(frame) => frame,
             Err(err) => {
-                // Log and attempt to reconfigure for any acquisition error.
-                web_sys::console::warn_1(
-                    &format!("surface acquire error, reconfiguring: {err:?}").into()
-                );
+                web_sys::console::warn_1(&format!("surface acquire error, reconfiguring: {err:?}").into());
                 platform_web::wgpu_init::reconfigure_surface(gfx);
 
-                // Try once more after reconfigure
                 match gfx.surface.get_current_texture() {
                     Ok(f) => f,
                     Err(e2) => {
-                        web_sys::console::error_1(
-                            &format!("acquire failed after reconfigure: {e2:?}").into()
-                        );
-                        // Bail out of this frame to avoid panicking
+                        web_sys::console::error_1(&format!("acquire failed after reconfigure: {e2:?}").into());
                         return;
                     }
                 }
             }
         };
 
-        let view = frame
-            .texture
-            .create_view(&wgpu::TextureViewDescriptor::default());
+        let view = frame.texture.create_view(&wgpu::TextureViewDescriptor::default());
 
-        let mut encoder = gfx
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("ironhold_clear_encoder"),
-            });
+        let mut encoder = gfx.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("ironhold_encoder"),
+        });
 
         {
-            let _rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("ironhold_clear_pass"),
+            // Single render pass: clear + draw triangle
+            let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("ironhold_render_pass"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                     view: &view,
                     depth_slice: None,
                     resolve_target: None,
                     ops: wgpu::Operations {
-                        // Pick any color you like:
-                        load: wgpu::LoadOp::Clear(wgpu::Color {  
+                        load: wgpu::LoadOp::Clear(wgpu::Color {
                             // Sky blue
                             r: 135.0/255.0, // ~0.529
                             g: 206.0/255.0, // ~0.808
                             b: 235.0/255.0, // ~0.922
                             a: 1.0,
                         }),
-                        store: StoreOp::Store,
+                        store: wgpu::StoreOp::Store,
                     },
                 })],
                 depth_stencil_attachment: None,
                 occlusion_query_set: None,
                 timestamp_writes: None,
             });
-            // _rpass drops here -> encoder contains the clear commands
+
+            if let Some(p) = &self.pipeline {
+                rpass.set_pipeline(&p.pipeline);
+                rpass.draw(0..p.num_vertices, 0..1);
+            }
         }
 
         gfx.queue.submit(Some(encoder.finish()));

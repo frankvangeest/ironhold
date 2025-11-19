@@ -26,6 +26,7 @@ engine_core = { path = "../engine_core" }
 engine_scene = { path = "../engine_scene" }
 engine_assets = { path = "../engine_assets" }
 platform_web = { path = "../platform_web" }
+engine_render = { path = "../engine_render" }
 
 
 # ✅ For the browser target, enable getrandom's JS backend (uses crypto.getRandomValues)

@@ -23,7 +23,7 @@
 
 ## Next Steps
 - ✅ Implement automatic surface reconfigure on window resize and any acquire error.
-- Begin scene rendering pipeline inside editor viewport (currently placeholder clear).
+- ✅ Begin scene rendering pipeline inside editor viewport (currently placeholder clear).
 - Add hot-reload integration for assets and scenes.
 - Improve error logging and recovery for WebGPU edge cases.
 
