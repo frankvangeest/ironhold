@@ -54,7 +54,14 @@
         const canvasId = "editor_canvas";
         const canvas = document.getElementById(canvasId);
         resizeCanvasToDevicePixelRatio(canvas);
-        window.addEventListener("resize", () => resizeCanvasToDevicePixelRatio(canvas));
+        window.addEventListener("resize", () => {
+          resizeCanvasToDevicePixelRatio(canvas);
+          // tell the Engine to reconfigure to the new size
+          // ?.() operator means: call if defined else do nothing
+          // ?.() is shorthand for 'if (typeof engine.reconfigure_surface === "function")'
+          engine.reconfigure_surface?.(); 
+        });
+
 
         // 3) Create options → init Engine (Rust), mount WebGPU, and start the loop.
         const opts = new EngineOptions().canvas_id(canvasId);

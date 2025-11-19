@@ -50,6 +50,18 @@ impl rwh::HasDisplayHandle for CanvasHandle {
     }
 }
 
+
+pub fn reconfigure_surface(gfx: &mut WgpuContext) {
+    let new_w = gfx.canvas.width().max(1);
+    let new_h = gfx.canvas.height().max(1);
+    // Update size if changed
+    if gfx.config.width != new_w || gfx.config.height != new_h {
+        gfx.config.width = new_w;
+        gfx.config.height = new_h;
+    }
+    gfx.surface.configure(&gfx.device, &gfx.config);
+}
+
 /// Initialize WebGPU/WGPU for the given canvas.
 pub async fn init_wgpu(canvas: HtmlCanvasElement) -> Result<WgpuContext, JsValue> {
     let instance_descriptor = InstanceDescriptor {
@@ -57,13 +69,11 @@ pub async fn init_wgpu(canvas: HtmlCanvasElement) -> Result<WgpuContext, JsValue
         ..Default::default()
     };
     let instance = Instance::new(&instance_descriptor); // Instance is the entry point. [2](https://docs.rs/wgpu/latest/wgpu/enum.SurfaceTarget.html)
-
-    // LEAK the handle to get an &'static CanvasHandle (surface needs 'static)
-    let target_ref: &'static CanvasHandle = Box::leak(Box::new(CanvasHandle::new(canvas.clone())));
-
+    
+    // ✅ Create the surface directly from the HtmlCanvasElement.
     let surface = instance
-        .create_surface(target_ref)
-        .map_err(|e| JsValue::from_str(&format!("create_surface failed: {e:?}")))?; // Requires HasWindow/DisplayHandle. 
+        .create_surface(SurfaceTarget::Canvas(canvas.clone()))
+        .map_err(|e| JsValue::from_str(&format!("create_surface(Canvas) failed: {e:?}")))?;
 
     let adapter = instance
         .request_adapter(&RequestAdapterOptions {

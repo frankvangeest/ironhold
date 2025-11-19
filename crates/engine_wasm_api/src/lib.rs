@@ -109,6 +109,12 @@ impl Engine {
         // TODO: configure wgpu surface for the canvas here
         Ok(())
     }
+    
+    pub fn reconfigure_surface(&mut self) {
+        if let Some(gfx) = self.gfx.as_mut() {
+            platform_web::wgpu_init::reconfigure_surface(gfx);
+        }
+    }
 
     /// Start the requestAnimationFrame loop.
     pub fn start(&mut self) -> Result<(), JsValue> {
@@ -179,37 +185,22 @@ impl Engine {
         let frame = match gfx.surface.get_current_texture() {
             Ok(frame) => frame,
             Err(err) => {
-                // If surface is lost or outdated, reconfigure it to the current canvas size.
-                let needs_reconfig = matches!(
-                    err,
-                    wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated
+                // Log and attempt to reconfigure for any acquisition error.
+                web_sys::console::warn_1(
+                    &format!("surface acquire error, reconfiguring: {err:?}").into()
                 );
-                if needs_reconfig {
-                    // Update config to current canvas size (in physical pixels)
-                    let w = gfx.canvas.width().max(1);
-                    let h = gfx.canvas.height().max(1);
-                    if gfx.config.width != w || gfx.config.height != h {
-                        gfx.config.width = w;
-                        gfx.config.height = h;
+                platform_web::wgpu_init::reconfigure_surface(gfx);
+
+                // Try once more after reconfigure
+                match gfx.surface.get_current_texture() {
+                    Ok(f) => f,
+                    Err(e2) => {
+                        web_sys::console::error_1(
+                            &format!("acquire failed after reconfigure: {e2:?}").into()
+                        );
+                        // Bail out of this frame to avoid panicking
+                        return;
                     }
-                    gfx.surface.configure(&gfx.device, &gfx.config);
-                    match gfx.surface.get_current_texture() {
-                        Ok(f) => f,
-                        Err(e2) => {
-                            web_sys::console::error_1(
-                                &format!("surface reacquire failed after reconfigure: {e2:?}").into(),
-                            );
-                            return;
-                        }
-                    }
-                } else if matches!(err, wgpu::SurfaceError::Timeout) {
-                    // Skip this frame; try again next RAF tick.
-                    return;
-                } else {
-                    // OutOfMemory or other fatal errors: stop rendering to avoid spinning.
-                    web_sys::console::error_1(&format!("fatal surface error: {err:?}").into());
-                    self.running = false;
-                    return;
                 }
             }
         };

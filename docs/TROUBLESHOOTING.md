@@ -44,3 +44,20 @@ wgpu version 0.20 was outdated. maxInterStageShaderComponents is no long support
 Updated to wgpu 27. The newer version of wgpu also has new versions of the various limit defaults.
 
 ---
+
+## WebGPU null context error (`getCurrentTexture`)
+
+### Symptom
+TypeError: Cannot read properties of null (reading 'getCurrentTexture')
+
+### Cause
+The WebGPU surface was created using raw-handle mapping instead of the Canvas path, or the surface was not reconfigured after a resize.
+
+### Fix
+- Switch to `SurfaceTarget::Canvas` when creating the surface.
+- Add proactive surface reconfigure logic on resize and on any acquisition error.
+
+---
+
+
+

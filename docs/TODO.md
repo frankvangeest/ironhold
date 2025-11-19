@@ -18,9 +18,14 @@
      eng.set_play_mode(true);
      eng.start();
      ```
-   - **Next**: resolve console errors;
-      panicked at crates\engine_wasm_api\src\lib.rs:159:35:
-      RefCell already borrowed
+   - ✅ Fixed RefCell already borrowed panic by adopting Rc<RefCell<Option<Closure>>> pattern.
+   - ✅ Fixed WebGPU getCurrentTexture null context error by switching to SurfaceTarget::Canvas and adding proactive surface reconfigure logic.
+
+## Next Steps
+- Implement automatic surface reconfigure on window resize and any acquire error.
+- Begin scene rendering pipeline inside editor viewport (currently placeholder clear).
+- Add hot-reload integration for assets and scenes.
+- Improve error logging and recovery for WebGPU edge cases.
 
 ## Nice-to-have (short)
 5. **Hot reload WS**
@@ -29,16 +34,13 @@
 6. **Editor viewport texture**
    - After base clear works, render to a texture and show inside egui panel.
 
-## Next Session (bugs to fix)
-- Console errors on the editor page → root-cause and fix.
-- Canvas should render a texture.
-- Optional: implement `xtask run_bindgen(debug: bool)` and call from `dev-web`.
-
 7. **Scene authoring roundtrip**
    - Minimal `Scene` RON with one sprite/mesh; load & display.
 
-## Later
-
+## Longer-Term Goals
+- Editor panels for scene graph and component editing.
+- Data-driven UI authoring using taffy.
+- Feature flags for physics and scripting.
 - Portable Windows editor & host apps.
 - Asset pipeline & importers (GLTF → internal).
 - Reflection + inspector & undo/redo.

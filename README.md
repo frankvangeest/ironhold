@@ -103,13 +103,15 @@ See more in `docs/ARCHITECTURE.md`.
 Dual licensed under MIT and Apache 2.0.
 Any assets in this repo fall under CC0 (public domain) or CC BY (give credit to creator).
 
-## Current Status (2025-11-13)
-
+## Current Status (2025-11-19)
 - ✅ Dev server starts on `http://127.0.0.1:5173` (WS echo stubbed/disabled on Windows).
 - ✅ `engine_wasm_api` builds to `wasm32-unknown-unknown` and `wasm-bindgen` outputs `/pkg/engine_wasm_api.js`.
 - ✅ Editor page imports `/pkg/engine_wasm_api.js` and calls the engine bootstrap.
-- ✅ Editor page canvas does clear to sky blue.
-- ⚠️ Browser shows multiple console errors;  We’ll address these next. See TODO.md.
+- ✅ Editor page canvas clears to sky blue.
+- ✅ Fixed major console errors:
+  - RefCell borrow panic in RAF loop.
+  - WebGPU null context error (`getCurrentTexture`).
+- ⚠️ Next: implement proactive surface reconfigure and begin scene rendering.
 
 ### Quick Start (dev)
 ```bat

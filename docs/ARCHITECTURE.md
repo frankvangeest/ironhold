@@ -5,6 +5,7 @@
 - **Editor shell (web)**: egui/eframe UI with docking + viewport. Uses the engine to render to a texture displayed inside the editor.
 - **Engine**: ECS-based core with distinct **Edit** and **Play** schedules to keep authoring/runtime separate and make undo/redo sane.
 - **Render**: `wgpu` for both web and native. Web is WebGPU-only.
+- **Surface handling (Web)**: Use `SurfaceTarget::Canvas` for creating the WebGPU surface instead of raw-handle mapping. This ensures a valid `GPUCanvasContext` and avoids null context errors.
 - **Data**: authoring formats are **RON** (human-readable). Packaging can later switch to a compact binary if needed.
 - **Game UI**: retained-mode using `taffy` for layout, authored as data, rendered by the engine. (Editor UI = egui only.)
 - **Hot reload**: minimal WS server (xtask) emits change events; engine re-fetches via `fetch()` through a web VFS.
