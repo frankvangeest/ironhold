@@ -110,11 +110,28 @@ impl Engine {
         Ok(())
     }
     
+
+    // Reconfigure the WebGPU surface to match the current canvas size.
+    // This should be called on window resize or when surface acquisition fails.
     pub fn reconfigure_surface(&mut self) {
         if let Some(gfx) = self.gfx.as_mut() {
+            let old_w = gfx.config.width;
+            let old_h = gfx.config.height;
+            let new_w = gfx.canvas.width().max(1);
+            let new_h = gfx.canvas.height().max(1);
+
+            if old_w != new_w || old_h != new_h {
+                web_sys::console::log_1(&format!(
+                    "Surface resize detected: {old_w}x{old_h} -> {new_w}x{new_h}"
+                ).into());
+            }
+
             platform_web::wgpu_init::reconfigure_surface(gfx);
+        } else {
+            web_sys::console::warn_1(&"reconfigure_surface called but gfx is None".into());
         }
     }
+
 
     /// Start the requestAnimationFrame loop.
     pub fn start(&mut self) -> Result<(), JsValue> {
