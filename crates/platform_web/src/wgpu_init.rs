@@ -6,7 +6,7 @@
 use wasm_bindgen::prelude::*;
 use web_sys::HtmlCanvasElement;
 use wgpu::*;
-use std::ptr::NonNull;
+// use std::ptr::NonNull;
 // NEW: use the rwh re-export from wgpu (matches wgpu's version exactly)
 use wgpu::rwh;
 

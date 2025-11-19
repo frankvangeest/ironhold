@@ -243,7 +243,7 @@ fn ws_thread(port: u16) {
     // Windows: stub (avoid ws+miow)
     #[cfg(windows)]
     {
-        println!("WS disabled on Windows for now (using stub).");
+        println!("WS disabled on Windows for now (using stub). ws port would be {}", port);
     }
 }
 

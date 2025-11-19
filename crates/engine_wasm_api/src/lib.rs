@@ -32,9 +32,7 @@ pub struct Engine {
     app: EngineApp,
     canvas: Option<HtmlCanvasElement>,
     gfx: Option<WgpuContext>,
-
-    // Keep the RAF closure alive across frames
-    raf_closure: Option<wasm_bindgen::closure::Closure<dyn FnMut(f64)>>,
+    raf_handle: Option<std::rc::Rc<std::cell::RefCell<Option<wasm_bindgen::closure::Closure<dyn FnMut(f64)>>>>>,
     running: bool,
     last_ts: f64,
 }
@@ -94,7 +92,7 @@ pub async fn init(opts: EngineOptions) -> Result<Engine, JsValue> {
         app: EngineApp::default(),
         canvas,
         gfx: None,
-        raf_closure: None,
+        raf_handle: None,
         running: false,
         last_ts: Date::now(), // milliseconds
     })
@@ -120,51 +118,55 @@ impl Engine {
         self.running = true;
 
         let window = web_sys::window().ok_or("no window")?;
-        // We’ll pass a raw pointer to self into the closure.
+        // Raw pointer so the closure can call back into self
         let engine_ptr: *mut Engine = self as *mut _;
 
+        // Shared handle that will keep the closure alive.
+        use std::{cell::RefCell, rc::Rc};
         let f: Rc<RefCell<Option<wasm_bindgen::closure::Closure<dyn FnMut(f64)>>>> =
             Rc::new(RefCell::new(None));
-        let g = f.clone();
+        let f_for_closure = Rc::clone(&f);
 
-        *g.borrow_mut() = Some(wasm_bindgen::closure::Closure::wrap(Box::new(move |ts_ms: f64| {
-            // SAFETY: Only used while Engine is alive and running.
+        // Install the closure
+        *f.borrow_mut() = Some(wasm_bindgen::closure::Closure::wrap(Box::new(move |ts_ms: f64| {
+            // SAFETY: Engine lives as long as start()/stop() contract
             let engine: &mut Engine = unsafe { &mut *engine_ptr };
             if !engine.running {
                 return; // allow graceful stop
             }
 
-            // dt in milliseconds (f32)
             let dt_ms = (ts_ms - engine.last_ts) as f32;
             engine.last_ts = ts_ms;
-
             engine.tick(dt_ms);
 
-            // Schedule next frame using the same closure
             if let Some(win) = web_sys::window() {
-                // The closure is stored in `f`, so we can reborrow it here.
-                let cb = f.borrow();
-                let cb_ref = cb.as_ref().unwrap();
-                let _ = win.request_animation_frame(cb_ref.as_ref().unchecked_ref());
+                // Borrow immutably just to pass the same JS function back to RAF
+                if let Some(cb) = f_for_closure.borrow().as_ref() {
+                    let _ = win.request_animation_frame(cb.as_ref().unchecked_ref());
+                }
             }
         }) as Box<dyn FnMut(f64)>));
 
-        // Kick off the first frame
-        let cb_ref = g.borrow();
-        let cb_func = cb_ref.as_ref().unwrap();
-        let _ = window.request_animation_frame(cb_func.as_ref().unchecked_ref());
+        // Kick off the first frame using the same handle.
+        {
+            let cb_ref = f.borrow();
+            let cb_func = cb_ref.as_ref().ok_or(JsValue::from_str("RAF closure missing"))?;
+            let _ = window.request_animation_frame(cb_func.as_ref().unchecked_ref());
+        } // immutable borrow ends here
 
-        // Store the closure on self so it doesn't get dropped
-        // We have to move it out of Rc<RefCell<Option<_>>>. Clone it by taking again.
-        self.raf_closure = Some(g.borrow_mut().take().unwrap());
+        // Keep the Rc alive on self (do not move the closure out)
+        self.raf_handle = Some(f);
+
         Ok(())
     }
 
     /// Stop the RAF loop gracefully.
     pub fn stop(&mut self) -> Result<(), JsValue> {
         self.running = false;
-        // Drop the closure reference so JS side can GC it eventually
-        self.raf_closure = None;
+        if let Some(handle) = self.raf_handle.take() {
+            // Drop the JS closure so the browser can GC it
+            *handle.borrow_mut() = None;
+        }
         Ok(())
     }
 
