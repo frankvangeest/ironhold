@@ -13,7 +13,7 @@ A web-first Rust game engine **library** (prebuilt to WebAssembly and usable fro
 - **Data-driven**: scenes, components, and UI serialized (RON for authoring).
 - **Game UI**: retained-mode (e.g., `taffy`), _not_ egui. Editor UI uses egui.
 - **Hot reload** from day one for assets/scenes via a simple WS dev server.
-- **No scripting/physics** for MVP (add later via features).
+- **No scripting/physics/networking** for MVP (add later via features).
 
 ## Workspace Structure (web-first)
 - apps/
@@ -103,6 +103,7 @@ See more in `docs/ARCHITECTURE.md`.
 Dual licensed under MIT and Apache 2.0.
 Any assets in this repo fall under CC0 (public domain) or CC BY (give credit to creator).
 
+
 ## Current Status (2025-11-19)
 - ✅ Dev server at `http://127.0.0.1:5173` (WS at `ws://127.0.0.1:5174/ws`)
 - ✅ `engine_wasm_api` builds; bindgen outputs `/pkg/engine_wasm_api.js`
@@ -110,6 +111,9 @@ Any assets in this repo fall under CC0 (public domain) or CC BY (give credit to 
 - ✅ **Viewport clears to sky blue and renders a red triangle** via a basic `wgpu` pipeline
 - ✅ **Hot reload**: WS client + **cross‑platform** WS server (tokio‑tungstenite)
 - ⚠️ Next: begin scene rendering from data (RON), reload scenes on change
+
+See more in `docs/TODO.md`.
+
 
 ### Quick Start (dev)
 ```bat
