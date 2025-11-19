@@ -81,6 +81,7 @@ A web-first Rust game engine **library** (prebuilt to WebAssembly and usable fro
 - docs/
   - ARCHITECTURE.md       # Project architecture and design choices
   - BUILD.md              # How to build the project and prereqs
+  - CHANGELOG.md          # All notable changes to this project will be documented in this file.
   - EDITOR_NOTES.md       # Things that need remembering when developing the editor
   - TODO.md               # Task and task progress
   - TROUBLESHOOTING.md    # Solutions to issues to things we have already solved
