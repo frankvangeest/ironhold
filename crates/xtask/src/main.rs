@@ -3,23 +3,35 @@
  * description: An xtask for building and serving the web components of the project.
  * It supports commands for development server, building web assets, and bundling the editor.
  */
-
-use clap::{Parser, Subcommand};
-use std::{env, fs, io::Write, path::{Path, PathBuf}, process::Command};
-use walkdir::WalkDir;
+use clap::{
+    Parser,
+    Subcommand,
+};
 use serde::Serialize;
+use std::io::Write;
+use std::path::{
+    Path,
+    PathBuf,
+};
+use std::process::Command;
+use std::{
+    env,
+    fs,
+};
+use walkdir::WalkDir;
 
 // WebSocket server dependencies
-use futures_util::{SinkExt, StreamExt};
-use tokio::net::TcpListener;
-use tokio_tungstenite::{
-    accept_hdr_async,
-    tungstenite::{
-        protocol::Message,
-        handshake::server::{Request as WsRequest, Response as WsResponse},
-    },
+use futures_util::{
+    SinkExt,
+    StreamExt,
 };
-
+use tokio::net::TcpListener;
+use tokio_tungstenite::accept_hdr_async;
+use tokio_tungstenite::tungstenite::handshake::server::{
+    Request as WsRequest,
+    Response as WsResponse,
+};
+use tokio_tungstenite::tungstenite::protocol::Message;
 
 #[derive(Parser)]
 #[command(name = "xtask")]
@@ -28,14 +40,12 @@ struct XTask {
     cmd: Cmd,
 }
 
-
 #[derive(Clone, Serialize)]
 struct BuildStamp {
-    id: String,      // e.g., "v0.1.0-23-gabc1234" or "abc1234-dirty"
-    git_sha: String, // short SHA
-    when_utc: String // RFC3339
+    id: String,       // e.g., "v0.1.0-23-gabc1234" or "abc1234-dirty"
+    git_sha: String,  // short SHA
+    when_utc: String, // RFC3339
 }
-
 
 #[derive(Subcommand)]
 enum Cmd {
@@ -55,6 +65,15 @@ enum Cmd {
         #[arg(long, default_value = "docs/project_snapshot.txt")]
         out: String,
     },
+    /// Format the repository using nightly rustfmt
+    Fmt {
+        /// Run in check mode (does not modify files)
+        #[arg(long)]
+        check: bool,
+        /// Pass extra args directly to rustfmt
+        #[arg(trailing_var_arg = true)]
+        extra: Vec<String>,
+    },
 }
 
 fn ensure_wasm_js_rustflags(mut current: String) -> String {
@@ -67,7 +86,6 @@ fn ensure_wasm_js_rustflags(mut current: String) -> String {
     }
     current
 }
-
 
 fn build_stamp_from_git() -> BuildStamp {
     // Prefer: git describe --always --dirty --tags
@@ -86,7 +104,8 @@ fn build_stamp_from_git() -> BuildStamp {
         .and_then(|o| String::from_utf8(o.stdout).ok())
         .map(|s| s.trim().to_string());
 
-    let id = describe.clone()
+    let id = describe
+        .clone()
         .or_else(|| short_sha.clone())
         .unwrap_or_else(|| "nogit".into());
 
@@ -94,7 +113,11 @@ fn build_stamp_from_git() -> BuildStamp {
 
     let when_utc = chrono::Utc::now().to_rfc3339();
 
-    BuildStamp { id, git_sha, when_utc }
+    BuildStamp {
+        id,
+        git_sha,
+        when_utc,
+    }
 }
 
 fn materialize_build_json(stamp: &BuildStamp) {
@@ -110,26 +133,44 @@ fn print_build_to_cli(stamp: &BuildStamp) {
     );
 }
 
-
 fn run_build(target_pkg: &str, release: bool) {
     let rf = env::var("RUSTFLAGS").unwrap_or_default();
     let rf = ensure_wasm_js_rustflags(rf);
     let mut cmd = Command::new("cargo");
-    let mut args = vec!["build", "-p", target_pkg, "--target", "wasm32-unknown-unknown"];
+    let mut args = vec![
+        "build",
+        "-p",
+        target_pkg,
+        "--target",
+        "wasm32-unknown-unknown",
+    ];
     if release {
         args.insert(1, "--release");
     }
-    let status = cmd.env("RUSTFLAGS", rf).args(args).status().expect("spawn cargo");
+    let status = cmd
+        .env("RUSTFLAGS", rf)
+        .args(args)
+        .status()
+        .expect("spawn cargo");
     if !status.success() {
         std::process::exit(status.code().unwrap_or(1));
     }
 }
 
 fn respond_static_server(port: u16) {
-    use tiny_http::{Server, Response, Method, StatusCode, Header, Request};
     use std::str::FromStr;
+    use tiny_http::{
+        Header,
+        Method,
+        Request,
+        Response,
+        Server,
+        StatusCode,
+    };
 
-    fn add_build_header(mut resp: tiny_http::Response<std::io::Cursor<Vec<u8>>>) -> tiny_http::Response<std::io::Cursor<Vec<u8>>> {
+    fn add_build_header(
+        mut resp: tiny_http::Response<std::io::Cursor<Vec<u8>>>,
+    ) -> tiny_http::Response<std::io::Cursor<Vec<u8>>> {
         if let Ok(id) = std::env::var("IRONHOLD_BUILD_ID") {
             let hdr = Header::from_bytes("X-Ironhold-Build", id).unwrap();
             resp.add_header(hdr);
@@ -147,13 +188,27 @@ fn respond_static_server(port: u16) {
         match fs::read(&path) {
             Ok(bytes) => {
                 let mut resp = Response::from_data(bytes);
-                match path.extension().and_then(|s| s.to_str()).unwrap_or_default() {
-                    "css"  => resp.add_header(Header::from_str("Content-Type: text/css").unwrap()),
-                    "js"   => resp.add_header(Header::from_str("Content-Type: application/javascript").unwrap()),
-                    "wasm" => resp.add_header(Header::from_str("Content-Type: application/wasm").unwrap()),
-                    "html" => resp.add_header(Header::from_str("Content-Type: text/html; charset=utf-8").unwrap()),
-                    "json" => resp.add_header(Header::from_str("Content-Type: application/json").unwrap()),
-                    "ron"  => resp.add_header(Header::from_str("Content-Type: text/plain; charset=utf-8").unwrap()),
+                match path
+                    .extension()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or_default()
+                {
+                    "css" => resp.add_header(Header::from_str("Content-Type: text/css").unwrap()),
+                    "js" => resp.add_header(
+                        Header::from_str("Content-Type: application/javascript").unwrap(),
+                    ),
+                    "wasm" => {
+                        resp.add_header(Header::from_str("Content-Type: application/wasm").unwrap())
+                    }
+                    "html" => resp.add_header(
+                        Header::from_str("Content-Type: text/html; charset=utf-8").unwrap(),
+                    ),
+                    "json" => {
+                        resp.add_header(Header::from_str("Content-Type: application/json").unwrap())
+                    }
+                    "ron" => resp.add_header(
+                        Header::from_str("Content-Type: text/plain; charset=utf-8").unwrap(),
+                    ),
                     _ => {}
                 }
                 resp = add_build_header(resp);
@@ -210,8 +265,15 @@ fn respond_static_server(port: u16) {
 
 fn run_bindgen(debug: bool) {
     // Pick debug or release output wasm path
-    let (profile_dir, msg) = if debug { ("debug", "debug") } else { ("release", "release") };
-    let wasm_path = format!("target/wasm32-unknown-unknown/{}/engine_wasm_api.wasm", profile_dir);
+    let (profile_dir, msg) = if debug {
+        ("debug", "debug")
+    } else {
+        ("release", "release")
+    };
+    let wasm_path = format!(
+        "target/wasm32-unknown-unknown/{}/engine_wasm_api.wasm",
+        profile_dir
+    );
 
     // Ensure wasm exists (build if not)
     if !std::path::Path::new(&wasm_path).exists() {
@@ -225,9 +287,11 @@ fn run_bindgen(debug: bool) {
     // Run wasm-bindgen
     let status = Command::new("wasm-bindgen")
         .args([
-            "--target","web",
+            "--target",
+            "web",
             "--no-typescript",
-            "--out-dir", out_dir,
+            "--out-dir",
+            out_dir,
             &wasm_path,
         ])
         .status()
@@ -237,7 +301,6 @@ fn run_bindgen(debug: bool) {
         std::process::exit(status.code().unwrap_or(1));
     }
 }
-
 
 fn ws_thread(port: u16) {
     // The WS server listens on HTTP port + 1 (same convention as before)
@@ -267,19 +330,20 @@ fn ws_thread(port: u16) {
 
                 // If you want to restrict to a specific path (e.g. /ws),
                 // you can parse req.uri() here and reject others.
-                let ws_stream = match accept_hdr_async(stream, |req: &WsRequest, resp: WsResponse| {
-                    // Optional logging:
-                    println!("WS handshake: {}", req.uri());
-                    Ok(resp)
-                })
-                .await
-                {
-                    Ok(s) => s,
-                    Err(e) => {
-                        eprintln!("ws handshake error: {e}");
-                        continue;
-                    }
-                };
+                let ws_stream =
+                    match accept_hdr_async(stream, |req: &WsRequest, resp: WsResponse| {
+                        // Optional logging:
+                        println!("WS handshake: {}", req.uri());
+                        Ok(resp)
+                    })
+                    .await
+                    {
+                        Ok(s) => s,
+                        Err(e) => {
+                            eprintln!("ws handshake error: {e}");
+                            continue;
+                        }
+                    };
 
                 tokio::spawn(async move {
                     let (mut write, mut read) = ws_stream.split();
@@ -328,14 +392,10 @@ fn ws_thread(port: u16) {
     });
 }
 
-
 /// Return true if path should be skipped (build outputs, VCS, etc.)
 fn is_skipped_dir(p: &Path) -> bool {
     if let Some(name) = p.file_name().and_then(|s| s.to_str()) {
-        matches!(
-            name,
-            "target" | "dist" | "node_modules" | ".git"
-        )
+        matches!(name, "target" | "dist" | "node_modules" | ".git")
     } else {
         false
     }
@@ -386,7 +446,7 @@ fn export_sources(out_path: &str) -> std::io::Result<()> {
             .unwrap_or_default()
             .to_ascii_lowercase();
         let include = matches!(
-            ext.as_str(), 
+            ext.as_str(),
             "md" | "rs" | "toml" | "html" | "css" | "js" | "ts" | "json" | "ron"
         );
         if include {
@@ -416,7 +476,11 @@ fn export_sources(out_path: &str) -> std::io::Result<()> {
     let mut out = fs::File::create(out_path)?;
     for f in &files {
         let rel = to_forward_slash(&f);
-        let ext = f.extension().and_then(|s| s.to_str()).unwrap_or_default().to_ascii_lowercase();
+        let ext = f
+            .extension()
+            .and_then(|s| s.to_str())
+            .unwrap_or_default()
+            .to_ascii_lowercase();
         let lang = lang_for(&ext);
 
         // Header: path fence
@@ -437,8 +501,39 @@ fn export_sources(out_path: &str) -> std::io::Result<()> {
         writeln!(out)?; // spacer line
     }
 
-    println!("Exported {} files (md, rs, toml, html, css, js, ts, json, ron) into {}", files.len(), out_path);
+    println!(
+        "Exported {} files (md, rs, toml, html, css, js, ts, json, ron) into {}",
+        files.len(),
+        out_path
+    );
     Ok(())
+}
+
+/// Execute `cargo +nightly fmt` with optional `--check`.
+fn run_fmt(check: bool, extra: &[String]) {
+    // Use nightly toolchain for rustfmt because we rely on unstable options.
+    // Equivalent to: cargo +nightly fmt [-- --check <extra>...]
+    let mut cmd = Command::new("cargo");
+    cmd.arg("+nightly").arg("fmt");
+
+    // If there are extra rustfmt args or we need --check, pass a `--` separator.
+    if check || !extra.is_empty() {
+        cmd.arg("--");
+        if check {
+            cmd.arg("--check");
+        }
+        for a in extra {
+            cmd.arg(a);
+        }
+    }
+
+    // In case contributors have environment-specific rustfmt config, we just run the command.
+    let status = cmd.status().expect("failed to spawn cargo +nightly fmt");
+    if !status.success() {
+        eprintln!("rustfmt failed with status: {:?}", status.code());
+        std::process::exit(status.code().unwrap_or(1));
+    }
+    println!("Formatting completed via cargo +nightly fmt");
 }
 
 fn main() {
@@ -449,7 +544,6 @@ fn main() {
             let stamp = build_stamp_from_git();
             print_build_to_cli(&stamp);
             materialize_build_json(&stamp);
-
 
             // 2) propagate to child cargo builds so WASM crates can embed it
             std::env::set_var("IRONHOLD_BUILD_ID", &stamp.id);
@@ -481,6 +575,9 @@ fn main() {
                 eprintln!("export failed: {e}");
                 std::process::exit(1);
             }
+        }
+        Cmd::Fmt { check, extra } => {
+            run_fmt(check, &extra);
         }
     }
 }

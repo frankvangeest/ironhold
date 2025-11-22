@@ -1,9 +1,13 @@
 # Ironhold
+Ironhold is a web-first Rust game engine with a browser-based editor, designed for WebGPU rendering and hot-reload workflows.
+The prebuilt wasm game engine library can be used standalone in javascript. Or used through the browser-based editor.
+Data will be loaded into the game engine through .ron files. Ron files are similar to json, but supports comments and you can leave the last comma. 
+The main in javascript and in rust will look similar in usage.
 
-A web-first Rust game engine **library** (prebuilt to WebAssembly and usable from JavaScript) plus a **browser-based editor**. Target platforms:
-
+Target platforms:
 - **Web (WASM)**: _primary_. WebGPU-only (if unsupported, show a friendly message).
 - **Windows portable**: _secondary_, added later without changing core architecture.
+- **Linux portable**: _secondary_, added later without changing core architecture.
 
 ## High-level Goals
 
@@ -78,14 +82,18 @@ A web-first Rust game engine **library** (prebuilt to WebAssembly and usable fro
     - src
       - main.rs
     - Cargo.toml
-- docs/
-  - ARCHITECTURE.md       # Project architecture and design choices
-  - BUILD.md              # How to build the project and prereqs
-  - CHANGELOG.md          # All notable changes to this project will be documented in this file.
-  - EDITOR_NOTES.md       # Things that need remembering when developing the editor
-  - TODO.md               # Task and task progress
-  - TROUBLESHOOTING.md    # Solutions to issues to things we have already solved
-  - WEBGPU_SETUP.md       # The wgpu flow we use
+- docs/                   # Project Documentation
+  - [Architecture](./docs/ARCHITECTURE.md)          # Project architecture and design choices
+  - [Build Guide](./docs/BUILD.md)                  # How to build the project and prereqs
+  - [Changelog](./docs/CHANGELOG.md)                # All notable changes to this project will be documented in this file.
+  - [Coding Standards](./docs/CODING_STANDARDS.md)  # Coding standards the project tries to adhere to
+  - [Contribution](./docs/Contribution.md)          # Guide for contributors
+  - [Dev Preferences](./docs/DEV_PREFERENCES.md)    # Lead dev project preferences notes
+  - [Editor Notes](./docs/EDITOR_NOTES.md)          # Things that need remembering when developing the editor
+  - [Roadmap](./ROADMAP.md)                         # 
+  - [ToDo](./docs/TODO.md)                          # Task and task progress
+  - [Troubleshooting](./docs/TROUBLESHOOTING.md)    # Solutions to issues to things we have already solved
+  - [WebGPU Setup](./docs/WEBGPU_SETUP.md)          # The wgpu flow we use
 - web/
   - engine-npm/           # npm packaging skeleton
   - static/               # editor CSS, etc.
@@ -97,7 +105,7 @@ A web-first Rust game engine **library** (prebuilt to WebAssembly and usable fro
 - LICENSE-MIT             # Dual MIT and Apache license
 
 
-See more in `docs/ARCHITECTURE.md`.
+See more in [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md).
 
 
 ## License
@@ -113,7 +121,7 @@ Any assets in this repo fall under CC0 (public domain) or CC BY (give credit to 
 - ✅ **Hot reload**: WS client + **cross‑platform** WS server (tokio‑tungstenite)
 - ⚠️ Next: begin scene rendering from data (RON), reload scenes on change
 
-See more in `docs/TODO.md`.
+See more in `docs/TODO.md` and `docs/CHANGELOG.md`.
 
 
 ### Quick Start (dev)

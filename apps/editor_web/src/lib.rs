@@ -15,7 +15,6 @@ use web_sys::HtmlCanvasElement;
 use eframe::web::WebRunner;
 use eframe::WebOptions;
 
-
 #[wasm_bindgen(start)]
 pub fn main_js() -> Result<(), JsValue> {
     console_error_panic_hook::set_once();
@@ -38,9 +37,9 @@ pub fn main_js() -> Result<(), JsValue> {
                 canvas,
                 web_options,
                 Box::new(|_cc| {
-                    Ok::<Box<dyn eframe::App>, Box<dyn std::error::Error + Send + Sync>>(
-                        Box::new(EditorApp::default()),
-                    )
+                    Ok::<Box<dyn eframe::App>, Box<dyn std::error::Error + Send + Sync>>(Box::new(
+                        EditorApp::default(),
+                    ))
                 }),
             )
             .await
@@ -59,7 +58,10 @@ impl eframe::App for EditorApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::TopBottomPanel::top("top").show(ctx, |ui| {
             ui.heading("Ironhold Editor (Web)");
-            if ui.button(if self.show_play { "Stop" } else { "Play" }).clicked() {
+            if ui
+                .button(if self.show_play { "Stop" } else { "Play" })
+                .clicked()
+            {
                 self.show_play = !self.show_play;
             }
         });

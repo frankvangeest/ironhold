@@ -1,0 +1,16 @@
+
+# Opt into nightly-only configuration options
+unstable_features = true
+
+# Merge separate use lines from the same module/crate into a single grouped import
+# Pick one:
+#   - "Module" merges by module path
+#   - "Crate" merges by crate root
+imports_granularity = "Module"
+
+# Force vertical layout inside grouped imports
+imports_layout = "Vertical"
+
+# Optional: group std/external/crate/local imports (nightly option)
+# Values: "StdExternalCrate" | "Preserve"
+# group_imports = "StdExternalCrate"

@@ -1,0 +1,29 @@
+
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build-and-fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchains
+        run: |
+          rustup toolchain install stable
+          rustup toolchain install nightly
+
+      - name: Nightly rustfmt check (via xtask)
+        run: cargo run -p xtask -- fmt --check
+
+      - name: Stable build
+        run: cargo +stable build --all --locked
+
+      - name: Stable tests
+        run: cargo +stable test --all --locked

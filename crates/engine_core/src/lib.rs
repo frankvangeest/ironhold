@@ -2,11 +2,16 @@
  * path: /crates/engine_core/src/lib.rs
  * description: Core engine application logic and structures.
  */
-
-use bevy_ecs::{prelude::World, schedule::Schedule};
+use bevy_ecs::{
+    prelude::World,
+    schedule::Schedule,
+};
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
-pub enum Mode { Edit, Play }
+pub enum Mode {
+    Edit,
+    Play,
+}
 
 pub struct EngineApp {
     pub world: World,
@@ -35,4 +40,6 @@ impl EngineApp {
     }
 }
 
-pub fn set_mode(app: &mut EngineApp, mode: Mode) { app.mode = mode; }
+pub fn set_mode(app: &mut EngineApp, mode: Mode) {
+    app.mode = mode;
+}

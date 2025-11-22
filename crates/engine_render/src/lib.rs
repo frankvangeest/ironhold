@@ -2,7 +2,6 @@
  * path: /crates/engine_render/src/lib.rs
  * description: Rendering module for the engine using wgpu.
  */
-
 use wgpu::*;
 
 pub struct BasicPipeline {
@@ -67,6 +66,9 @@ impl BasicPipeline {
             cache: None,
         });
 
-        Self { pipeline, num_vertices: 3 }
+        Self {
+            pipeline,
+            num_vertices: 3,
+        }
     }
 }

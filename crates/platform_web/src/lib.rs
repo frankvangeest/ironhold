@@ -3,22 +3,27 @@
  * description: Web platform support for the project, including WebGPU feature detection
  * and hot-reloading capabilities.
  */
-
 pub mod wgpu_init;
 pub use wgpu_init::WgpuContext;
 
+use js_sys::ArrayBuffer;
+use serde::Deserialize;
+use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::{WebSocket, MessageEvent, Event, Blob, FileReader};
-use serde::Deserialize;
-use js_sys::ArrayBuffer;
-use std::rc::Rc;
+use web_sys::{
+    Blob,
+    Event,
+    FileReader,
+    MessageEvent,
+    WebSocket,
+};
 
 #[derive(Deserialize, Debug)]
 struct AssetChanged {
     #[serde(rename = "type")]
-    kind: String,   // "asset-changed"
-    url: String,    // e.g., "/assets/foo.ron"
+    kind: String, // "asset-changed"
+    url: String, // e.g., "/assets/foo.ron"
 }
 
 // Optional: if you plan multiple message kinds later
@@ -36,7 +41,8 @@ enum WsMessage {
 #[wasm_bindgen]
 pub fn webgpu_supported() -> bool {
     // Minimal feature-detection via JS (navigator.gpu)
-    js_sys::Reflect::has(&web_sys::window().unwrap(), &JsValue::from_str("navigator")).unwrap_or(false)
+    js_sys::Reflect::has(&web_sys::window().unwrap(), &JsValue::from_str("navigator"))
+        .unwrap_or(false)
 }
 
 pub fn compute_ws_url() -> Result<String, JsValue> {
@@ -99,7 +105,7 @@ where
                     Err(err) => {
                         // Only malformed JSON should end up here now
                         web_sys::console::warn_1(
-                            &format!("WS JSON parse error (text): {err} => {s}").into()
+                            &format!("WS JSON parse error (text): {err} => {s}").into(),
                         );
                     }
                 }
@@ -113,27 +119,31 @@ where
                 let fr_clone = fr.clone();
                 let cb = handler.clone();
 
-                let onloadend = wasm_bindgen::closure::Closure::<dyn FnMut(Event)>::new(move |_| {
-                    let result = fr_clone.result().unwrap_or_else(|_| JsValue::NULL);
-                    if let Some(txt) = result.as_string() {
-                        match serde_json::from_str::<WsMessage>(&txt) {
-                            Ok(WsMessage::AssetChanged { url }) => cb.clone()(url),
-                            Ok(WsMessage::Hello) => {
-                                web_sys::console::debug_1(&"WS hello (blob)".into());
+                let onloadend =
+                    wasm_bindgen::closure::Closure::<dyn FnMut(Event)>::new(move |_| {
+                        let result = fr_clone.result().unwrap_or_else(|_| JsValue::NULL);
+                        if let Some(txt) = result.as_string() {
+                            match serde_json::from_str::<WsMessage>(&txt) {
+                                Ok(WsMessage::AssetChanged { url }) => cb.clone()(url),
+                                Ok(WsMessage::Hello) => {
+                                    web_sys::console::debug_1(&"WS hello (blob)".into());
+                                }
+                                Ok(WsMessage::Unknown) => {
+                                    web_sys::console::debug_1(
+                                        &format!("WS ignored (blob): {}", txt).into(),
+                                    );
+                                }
+                                Err(err) => {
+                                    web_sys::console::warn_1(
+                                        &format!("WS JSON parse error (blob): {err} => {txt}")
+                                            .into(),
+                                    );
+                                }
                             }
-                            Ok(WsMessage::Unknown) => {
-                                web_sys::console::debug_1(&format!("WS ignored (blob): {}", txt).into());
-                            }
-                            Err(err) => {
-                                web_sys::console::warn_1(
-                                    &format!("WS JSON parse error (blob): {err} => {txt}").into()
-                                );
-                            }
+                        } else {
+                            web_sys::console::warn_1(&"WS Blob result not a string".into());
                         }
-                    } else {
-                        web_sys::console::warn_1(&"WS Blob result not a string".into());
-                    }
-                });
+                    });
 
                 fr.set_onloadend(Some(onloadend.as_ref().unchecked_ref()));
                 onloadend.forget();
@@ -147,7 +157,9 @@ where
             // ---- ARRAYBUFFER branch (for completeness) -----------------------
             if data.is_instance_of::<ArrayBuffer>() {
                 // If your server ever sends JSON as binary, decode UTF-8 here.
-                web_sys::console::warn_1(&"WS data is ArrayBuffer (binary); ignoring for now".into());
+                web_sys::console::warn_1(
+                    &"WS data is ArrayBuffer (binary); ignoring for now".into(),
+                );
                 return;
             }
 
@@ -173,6 +185,3 @@ where
 
     Ok(())
 }
-
-
-

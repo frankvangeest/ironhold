@@ -2,7 +2,6 @@
  * path: /apps/host_web/src/lib.rs
  * description: Web host application for the engine WASM module.
  */
-
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen(start)]
