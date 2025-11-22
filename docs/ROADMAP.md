@@ -9,13 +9,13 @@ This roadmap outlines the planned development stages for Ironhold. It will evolv
 ## ✅ Completed (MVP Foundations)
 - WebGPU initialization and surface handling.
 - WASM engine builds and JS glue via `wasm-bindgen`.
-- Editor boots and integrates engine.
+- Editor boots and integrates engine. 
 - Basic rendering pipeline (clear color + red triangle).
 - Hot reload foundation (WS client + cross-platform WS server).
 
 ---
 
-## 🔜 Next Sprint (Short-Term Goals)
+## 🔜 Short-Term Goals
 - **Scene Rendering**:
   - Load RON scene data and render primitives (quad/sprite).
   - Implement reload on asset change (hot reload → fetch → apply).
@@ -26,7 +26,7 @@ This roadmap outlines the planned development stages for Ironhold. It will evolv
   - Add error overlays for reload failures.
 - **Dev Experience**:
   - Improve logging and recovery for WebGPU edge cases.
-
+  - Add an optional parameter to only include a list of files and or crates to the 'cargo run -p xtask -- export-sources' command. E.g. a comma seperated list [file.md,file2.rs,file3.toml,<crate_name>]. Or something similar. Without the additional parameter is should still be have as it has before.
 ---
 
 ## ⏳ Medium-Term Goals

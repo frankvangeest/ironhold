@@ -52,5 +52,4 @@ Currently exported from `engine_wasm_api` (subject to iteration):
 - `wasm-bindgen` will produce `*.js` glue + `*.wasm`; `xtask build-web` will run bindgen, then serve result under `/pkg`.
  
 
-**Implementation status**  
-See TODO.MD
+
