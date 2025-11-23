@@ -3,6 +3,8 @@
 Thanks for your interest in contributing! Ironhold is currently in an early stage and primarily maintained by one developer with AI tooling. This guide explains how to set up your environment, make changes, and submit contributions efficiently.
 
 ## Ground Rules
+
+For detailed coding style and formatting rules, see [CODING_STANDARDS.md](./CODING_STANDARDS.md).
 - Be pragmatic: prefer small, incremental changes with clear scope.
 - Keep documentation in sync (update `README.md`, `docs/CHANGELOG.md`, `docs/TODO.md`, or others when relevant).
 - Follow the project’s coding standards (see **[CODING_STANDARDS.md](./CODING_STANDARDS.md)**).
@@ -43,22 +45,6 @@ Thanks for your interest in contributing! Ironhold is currently in an early stag
 
 ## Code Style & Quality
 - **Rust**: follow **[CODING_STANDARDS.md](./CODING_STANDARDS.md)** and the standard Rust style.
-### Rust Import Style (clarity)
-- Imports should **not** be written on the same line. Use multi-line grouped imports for clarity, e.g.:
-  - Preferred import style for clarity:
-    ```rust
-    use clap::{ // Don't write everything on the same line
-      Parser,
-      Subcommand
-    };
-    ```
-- Run formatters and linters:
-  ```bash
-  cargo fmt --all
-  cargo clippy --all -- -D warnings
-  ```
-  Look at the **CODING_STANDARDS.md** for more details.
-- **HTML/CSS/JS**: use simple, common conventions (semantic HTML, 2-space indent, kebab-case CSS class names, ES6+ JS).
 ### Formatting
 - Use `cargo run -p xtask -- fmt` to format via **nightly rustfmt**.
 - CI/Check mode: `cargo run -p xtask -- fmt --check`.

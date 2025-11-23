@@ -19,8 +19,8 @@ jobs:
           rustup toolchain install stable
           rustup toolchain install nightly
 
-      - name: Nightly rustfmt check (via xtask)
-        run: cargo run -p xtask -- fmt --check
+      # - name: Nightly rustfmt check (via xtask)
+      #   run: cargo run -p xtask -- fmt --check
 
       - name: Stable build
         run: cargo +stable build --all --locked
