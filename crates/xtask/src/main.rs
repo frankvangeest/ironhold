@@ -407,6 +407,7 @@ fn lang_for(ext: &str) -> &'static str {
         "rs"    => "rust",
         "toml"  => "toml",
         "md"    => "markdown",
+        "wgsl"  => "wgsl",
         // Web-facing assets
         "html"  => "html",
         "css"   => "css",
@@ -447,7 +448,7 @@ fn export_sources(out_path: &str) -> std::io::Result<()> {
             .to_ascii_lowercase();
         let include = matches!(
             ext.as_str(),
-            "md" | "rs" | "toml" | "html" | "css" | "js" | "ts" | "json" | "ron"
+            "md" | "rs" | "toml" | "html" | "css" | "js" | "ts" | "json" | "ron" | "wgsl"
         );
         if include {
             // Also skip files in skipped dirs (defensive)
