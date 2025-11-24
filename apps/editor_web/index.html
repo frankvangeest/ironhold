@@ -68,9 +68,18 @@
         const engine = await initEngine(opts);
 
         await engine.mount_async();   // WebGPU device/queue/surface + configure
+
+        const response = await fetch("/assets/example_scene.ron");
+        const ronText = await response.text();
+        await engine.load_scene_from_ron(ronText);
+
         engine.set_play_mode(true);   // Optional toggle (Edit/Play)
         engine.start();               // Starts requestAnimationFrame loop
         engine.start_hot_reload();    // Starts hot-reload WebSocket listener
+
+        
+
+
       }
 
       main().catch((e) => {

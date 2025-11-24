@@ -16,7 +16,7 @@ use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::HtmlCanvasElement;
-use engine_render::BasicPipeline;
+use engine_render::{QuadPipeline, InstanceData};
 
 // Build info functions
 fn build_id() -> &'static str {
@@ -37,7 +37,8 @@ pub struct Engine {
     raf_handle: Option<
         std::rc::Rc<std::cell::RefCell<Option<wasm_bindgen::closure::Closure<dyn FnMut(f64)>>>>,
     >,
-    pipeline: Option<BasicPipeline>,
+    pipeline: Option<QuadPipeline>,
+    current_scene: Option<engine_scene::Scene>,
     running: bool,
     last_ts: f64,
 }
@@ -50,9 +51,16 @@ impl Engine {
             .take()
             .ok_or(JsValue::from_str("no canvas bound"))?;
         let gfx = platform_web::wgpu_init::init_wgpu(canvas).await?;
-        let pipeline = BasicPipeline::new(&gfx.device, &gfx.config);
 
-        self.pipeline = Some(pipeline);
+        // Build initial instance data (empty or from current_scene)
+        let instances: Vec<InstanceData> = if let Some(scene) = &self.current_scene {
+            scene_to_instances(scene) // mapping helper (see below)
+        } else {
+            Vec::new()
+        };
+
+        let quad = QuadPipeline::new(&gfx.device, gfx.config.format, &instances);
+        self.pipeline = Some(quad);
         self.gfx = Some(gfx);
 
         Ok(())
@@ -134,6 +142,7 @@ pub async fn init(opts: EngineOptions) -> Result<Engine, JsValue> {
         pipeline: None,
         running: false,
         last_ts: Date::now(), // milliseconds
+        current_scene: None,
     })
 }
 
@@ -292,33 +301,34 @@ impl Engine {
                 label: Some("ironhold_encoder"),
             });
 
-        {
-            // Single render pass: clear + draw triangle
-            let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("ironhold_render_pass"),
-                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: &view,
-                    depth_slice: None,
-                    resolve_target: None,
-                    ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(wgpu::Color {
-                            // Sky blue
-                            r: 135.0 / 255.0, // ~0.529
-                            g: 206.0 / 255.0, // ~0.808
-                            b: 235.0 / 255.0, // ~0.922
-                            a: 1.0,
-                        }),
-                        store: wgpu::StoreOp::Store,
-                    },
-                })],
-                depth_stencil_attachment: None,
-                occlusion_query_set: None,
-                timestamp_writes: None,
-            });
+        // Update instances on GPU
+        if let (Some(pip), Some(scene)) = (self.pipeline.as_mut(), self.current_scene.as_ref()) {
+            let instances = scene_to_instances(scene);
+            pip.ensure_capacity(&gfx.device, &instances);
+            pip.update_instances(&gfx.queue, &instances);
 
-            if let Some(p) = &self.pipeline {
-                rpass.set_pipeline(&p.pipeline);
-                rpass.draw(0..p.num_vertices, 0..1);
+            // Render pass: clear + draw quads
+            {
+                let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                    label: Some("ironhold_render_pass"),
+                    color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                        view: &view,
+                        depth_slice: None,
+                        resolve_target: None,
+                        ops: wgpu::Operations {
+                            load: wgpu::LoadOp::Clear(wgpu::Color { 
+                                r: 135.0/255.0, 
+                                g: 206.0/255.0, 
+                                b: 235.0/255.0, a: 1.0 
+                            }),
+                            store: wgpu::StoreOp::Store,
+                        },
+                    })],
+                    depth_stencil_attachment: None,
+                    occlusion_query_set: None,
+                    timestamp_writes: None,
+                });
+                pip.draw(&mut rpass);
             }
         }
 
@@ -327,8 +337,9 @@ impl Engine {
     }
 
     pub fn load_scene_from_ron(&mut self, ron_str: &str) -> Result<(), JsValue> {
-        let _scene: Scene =
+        let scene: Scene =
             Scene::from_ron_str(ron_str).map_err(|e| JsValue::from_str(&e.to_string()))?;
+        self.current_scene = Some(scene);
         Ok(())
     }
 
@@ -340,3 +351,52 @@ impl Engine {
 // Helper to allow storing closures (not fully used yet)
 // struct RcCell<T>(std::rc::Rc<std::cell::RefCell<Option<T>>>);
 // impl<T> RcCell<T> { fn new(v: Option<T>) -> Self { Self(std::rc::Rc::new(std::cell::RefCell::new(v))) } }
+
+
+
+pub fn scene_to_instances(scene: &engine_scene::Scene) -> Vec<engine_render::InstanceData> {
+    scene
+        .entities
+        .iter()
+        .map(|e| {
+            // Rotation is authored in degrees in RON; WGSL expects radians.
+            let rot_rad = e.transform.rotation.to_radians();
+
+            engine_render::InstanceData {
+                transform: engine_render::Transform {
+                    // t0: position.x, position.y, rotation(rad), pad
+                    t0: [
+                        e.transform.position.0,
+                        e.transform.position.1,
+                        rot_rad,
+                        0.0,
+                    ],
+                    // t1: scale.x, scale.y, pad, pad
+                    t1: [
+                        e.transform.scale.0,
+                        e.transform.scale.1,
+                        0.0,
+                        0.0,
+                    ],
+                },
+                sprite: engine_render::Sprite {
+                    // s0: dimensions.x, dimensions.y, pad, pad
+                    s0: [
+                        e.sprite.dimensions.0,
+                        e.sprite.dimensions.1,
+                        0.0,
+                        0.0,
+                    ],
+                    // RGBA
+                    color: [
+                        e.sprite.color.0,
+                        e.sprite.color.1,
+                        e.sprite.color.2,
+                        e.sprite.color.3,
+                    ],
+                },
+            }
+        })
+        .collect()
+}
+

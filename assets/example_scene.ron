@@ -1,0 +1,39 @@
+
+Scene(
+    name: "ExampleScene",
+    entities: [
+        (
+            transform: (
+                position: (0.0, 0.0),
+                rotation: 0.0,              // deg
+                scale: (1.0, 1.0),
+            ),
+            sprite: (
+                dimensions: (1.0, 1.0),     // width, height
+                color: (1.0, 0.0, 0.0, 1.0), // Red
+            ),
+        ),
+        (
+            transform: (
+                position: (2.0, 1.0),
+                rotation: 45.0,             // deg
+                scale: (1.0, 1.0),
+            ),
+            sprite: (
+                dimensions: (0.5, 2.0),
+                color: (0.0, 1.0, 0.0, 1.0), // Green
+            ),
+        ),
+        (
+            transform: (
+                position: (-1.5, -0.5),
+                rotation: 90.0,             // deg
+                scale: (1.0, 0.75),
+            ),
+            sprite: (
+                dimensions: (2.0, 1.0),
+                color: (0.0, 0.0, 1.0, 1.0), // Blue
+            ),
+        ),
+    ],
+)
