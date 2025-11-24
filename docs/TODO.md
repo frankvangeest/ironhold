@@ -25,7 +25,7 @@
         - ✅ Implement `update_camera(queue, width, height)` in QuadPipeline
         - ✅ Call `update_camera()` inside `Engine::reconfigure_surface()` after canvas resize
     - [ ] Verify rendering of all 3 quads from `example_scene.ron` with correct positions, scales, and colors
-          Status: Bly sky color background vivible, no quads visible.
+          Status: Blue Sky color background visible, no quads visible.
   - [ ] Wire hot reload: on `asset-changed`, `fetch(url)` → parse RON → apply scene/asset
     - [ ] Implement WebSocket client callback in Rust (`start_hot_reload`) to receive `asset-changed` messages
     - [ ] Parse incoming JSON message into a typed enum (already partially done)
