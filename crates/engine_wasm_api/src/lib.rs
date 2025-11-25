@@ -11,8 +11,8 @@ use engine_core::{
 use engine_scene::Scene;
 use js_sys;
 use platform_web::WgpuContext;
-use std::cell::RefCell;
-use std::rc::Rc;
+// use std::cell::RefCell;
+// use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::HtmlCanvasElement;
@@ -27,44 +27,6 @@ fn build_sha() -> &'static str {
 }
 fn build_time() -> &'static str {
     option_env!("IRONHOLD_BUILD_TIME").unwrap_or("unknown")
-}
-
-#[wasm_bindgen]
-pub struct Engine {
-    app: EngineApp,
-    canvas: Option<HtmlCanvasElement>,
-    gfx: Option<WgpuContext>,
-    raf_handle: Option<
-        std::rc::Rc<std::cell::RefCell<Option<wasm_bindgen::closure::Closure<dyn FnMut(f64)>>>>,
-    >,
-    pipeline: Option<QuadPipeline>,
-    current_scene: Option<engine_scene::Scene>,
-    running: bool,
-    last_ts: f64,
-}
-
-#[wasm_bindgen]
-impl Engine {
-    pub async fn mount_async(&mut self) -> Result<(), JsValue> {
-        let canvas = self
-            .canvas
-            .take()
-            .ok_or(JsValue::from_str("no canvas bound"))?;
-        let gfx = platform_web::wgpu_init::init_wgpu(canvas).await?;
-
-        // Build initial instance data (empty or from current_scene)
-        let instances: Vec<InstanceData> = if let Some(scene) = &self.current_scene {
-            scene_to_instances(scene) // mapping helper (see below)
-        } else {
-            Vec::new()
-        };
-
-        let quad = QuadPipeline::new(&gfx.device, gfx.config.format, &instances);
-        self.pipeline = Some(quad);
-        self.gfx = Some(gfx);
-
-        Ok(())
-    }
 }
 
 #[wasm_bindgen]
@@ -105,49 +67,48 @@ impl EngineOptions {
 }
 
 #[wasm_bindgen]
-pub async fn init(opts: EngineOptions) -> Result<Engine, JsValue> {
-    console_error_panic_hook::set_once();
-
-    // Log build info
-    web_sys::console::log_1(
-        &format!(
-            "Ironhold build {} ({} @ {})",
-            build_id(),
-            build_sha(),
-            build_time()
-        )
-        .into(),
-    );
-
-    let mut canvas: Option<HtmlCanvasElement> = None;
-    if let Some(id) = opts.canvas_id.clone() {
-        let window = web_sys::window().ok_or_else(|| JsValue::from_str("no window"))?;
-        let doc = window
-            .document()
-            .ok_or_else(|| JsValue::from_str("no document"))?;
-        let el = doc
-            .get_element_by_id(&id)
-            .ok_or_else(|| JsValue::from_str("canvas not found"))?;
-        canvas = Some(
-            el.dyn_into::<HtmlCanvasElement>()
-                .map_err(|_| JsValue::from_str("bad canvas"))?,
-        );
-    }
-
-    Ok(Engine {
-        app: EngineApp::default(),
-        canvas,
-        gfx: None,
-        raf_handle: None,
-        pipeline: None,
-        running: false,
-        last_ts: Date::now(), // milliseconds
-        current_scene: None,
-    })
+pub struct Engine {
+    app: EngineApp,
+    canvas: Option<HtmlCanvasElement>,
+    gfx: Option<WgpuContext>,
+    raf_handle: Option<
+        std::rc::Rc<std::cell::RefCell<Option<wasm_bindgen::closure::Closure<dyn FnMut(f64)>>>>,
+    >,
+    pipeline: Option<QuadPipeline>,
+    current_scene: Option<engine_scene::Scene>,
+    running: bool,
+    last_ts: f64,
 }
 
 #[wasm_bindgen]
 impl Engine {
+    pub async fn mount_async(&mut self) -> Result<(), JsValue> {
+        let canvas = self
+            .canvas
+            .take()
+            .ok_or(JsValue::from_str("no canvas bound"))?;
+        let gfx = platform_web::wgpu_init::init_wgpu(canvas).await?;
+
+        // Build initial instance data (empty or from current_scene)
+        let instances: Vec<InstanceData> = if let Some(scene) = &self.current_scene {
+            scene_to_instances(scene) // mapping helper (see below)
+        } else {
+            Vec::new()
+        };
+
+        let quad = QuadPipeline::new(&gfx.device, gfx.config.format, &instances);
+        self.pipeline = Some(quad);
+        self.gfx = Some(gfx);
+
+        
+        // After creating gfx and pipeline
+        if let (Some(pip), Some(gfx)) = (self.pipeline.as_ref(), self.gfx.as_ref()) {
+            pip.update_camera(&gfx.queue, gfx.config.width, gfx.config.height);
+        }
+
+        Ok(())
+    }
+
     pub fn mount(&mut self) -> Result<(), JsValue> {
         if self.canvas.is_none() {
             return Err(JsValue::from_str("no canvas bound"));
@@ -166,12 +127,15 @@ impl Engine {
             let new_h = gfx.canvas.height().max(1);
 
             if old_w != new_w || old_h != new_h {
-                web_sys::console::log_1(
-                    &format!("Surface resize detected: {old_w}x{old_h} -> {new_w}x{new_h}").into(),
-                );
+                web_sys::console::log_1(&format!("Surface resize detected: {old_w}x{old_h} -> {new_w}x{new_h}").into());
             }
 
             platform_web::wgpu_init::reconfigure_surface(gfx);
+
+            // ✅ Update camera projection to match new canvas size
+            if let Some(pipeline) = self.pipeline.as_ref() {
+                pipeline.update_camera(&gfx.queue, new_w, new_h);
+            }
         } else {
             web_sys::console::warn_1(&"reconfigure_surface called but gfx is None".into());
         }
@@ -242,18 +206,6 @@ impl Engine {
         Ok(())
     }
 
-    // pub fn start_hot_reload() {
-    //     if let Some(ws) = platform_web::hotreload::start_ws("ws://127.0.0.1:5174/ws") {
-    //         let onmessage = Closure::wrap(Box::new(move |e: web_sys::MessageEvent| {
-    //             web_sys::console::log_1(&format!("HotReload message: {:?}", e.data()).into());
-    //         }) as Box<dyn FnMut(_)>);
-    //         ws.set_onmessage(Some(onmessage.as_ref().unchecked_ref()));
-    //         onmessage.forget();
-    //     } else {
-    //         web_sys::console::warn_1(&"HotReload WS not available".into());
-    //     }
-    // }
-
     /// Start the Hot Reload WebSocket and register a simple asset-changed handler.
     #[wasm_bindgen]
     pub fn start_hot_reload(&mut self) -> Result<(), JsValue> {
@@ -263,14 +215,50 @@ impl Engine {
         })
     }
 
+    
     pub fn tick(&mut self, _dt_ms: f32) {
         self.app.update();
-
-        let Some(gfx) = self.gfx.as_mut() else {
-            return;
+        let Some(gfx) = self.gfx.as_mut() else { 
+            web_sys::console::error_1(&"gfx None in tick()".into());
+            return; 
         };
 
-        // Handle surface acquisition with basic recovery on Lost/Outdated.
+        // Scene -> instances
+        let (inst_count, inst_bytes) = if let Some(scene) = self.current_scene.as_ref() {
+            let instances = scene_to_instances(scene);
+            
+            for (i, inst) in instances.iter().enumerate() {
+                web_sys::console::log_1(&format!(
+                    "inst[{}]: pos=({:.2},{:.2}) rot={:.2} dims=({:.2},{:.2}) color=({:.2},{:.2},{:.2},{:.2})",
+                    i,
+                    inst.transform.t0[0], inst.transform.t0[1], inst.transform.t0[2],
+                    inst.sprite.s0[0], inst.sprite.s0[1],
+                    inst.sprite.color[0], inst.sprite.color[1], inst.sprite.color[2], inst.sprite.color[3]
+                ).into());
+            }
+
+            web_sys::console::log_1(&format!(
+                "scene entities = {}, instances = {}",
+                scene.entities.len(), instances.len()
+            ).into());
+
+            // Capacity + upload logging happens in pipeline (see below)
+            if let Some(pip) = self.pipeline.as_mut() {
+                pip.ensure_capacity(&gfx.device, &instances);
+                pip.update_instances(&gfx.queue, &instances);
+                (instances.len() as u32, (instances.len() * std::mem::size_of::<engine_render::InstanceData>()) as u64)
+            } else {
+                web_sys::console::error_1(&"pipeline None; cannot upload instances".into());
+                (0, 0)
+            }
+        } else {
+            web_sys::console::warn_1(&"current_scene None".into());
+            (0, 0)
+        };
+
+        web_sys::console::log_1(&format!("inst_count = {}, inst_bytes = {}", inst_count, inst_bytes).into());
+
+        // Acquire + reconfigure path already logs; keep it
         let frame = match gfx.surface.get_current_texture() {
             Ok(frame) => frame,
             Err(err) => {
@@ -291,23 +279,13 @@ impl Engine {
             }
         };
 
-        let view = frame
-            .texture
-            .create_view(&wgpu::TextureViewDescriptor::default());
+        let view = frame.texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let mut encoder = gfx.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("ironhold_encoder"),
+        });
 
-        let mut encoder = gfx
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("ironhold_encoder"),
-            });
-
-        // Update instances on GPU
-        if let (Some(pip), Some(scene)) = (self.pipeline.as_mut(), self.current_scene.as_ref()) {
-            let instances = scene_to_instances(scene);
-            pip.ensure_capacity(&gfx.device, &instances);
-            pip.update_instances(&gfx.queue, &instances);
-
-            // Render pass: clear + draw quads
+        if let Some(pip) = self.pipeline.as_ref() {
+            // Start a render pass
             {
                 let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                     label: Some("ironhold_render_pass"),
@@ -316,11 +294,7 @@ impl Engine {
                         depth_slice: None,
                         resolve_target: None,
                         ops: wgpu::Operations {
-                            load: wgpu::LoadOp::Clear(wgpu::Color { 
-                                r: 135.0/255.0, 
-                                g: 206.0/255.0, 
-                                b: 235.0/255.0, a: 1.0 
-                            }),
+                            load: wgpu::LoadOp::Clear(wgpu::Color { r: 135.0/255.0, g: 206.0/255.0, b: 235.0/255.0, a: 1.0 }),
                             store: wgpu::StoreOp::Store,
                         },
                     })],
@@ -328,13 +302,23 @@ impl Engine {
                     occlusion_query_set: None,
                     timestamp_writes: None,
                 });
-                pip.draw(&mut rpass);
+
+                // Bind groups (indices must match WGSL)
+                rpass.set_pipeline(&pip.pipeline);
+                rpass.set_bind_group(0, &pip.instance_bind_group, &[]);
+                rpass.set_bind_group(1, &pip.camera_bind_group, &[]);
+
+                web_sys::console::log_1(&format!("draw(verts=6, instances={})", pip.instance_count).into());
+                rpass.draw(0..6, 0..pip.instance_count);
             }
+        } else {
+            web_sys::console::error_1(&"pipeline None; skipping draw".into());
         }
 
         gfx.queue.submit(Some(encoder.finish()));
         frame.present();
     }
+
 
     pub fn load_scene_from_ron(&mut self, ron_str: &str) -> Result<(), JsValue> {
         let scene: Scene =
@@ -351,8 +335,6 @@ impl Engine {
 // Helper to allow storing closures (not fully used yet)
 // struct RcCell<T>(std::rc::Rc<std::cell::RefCell<Option<T>>>);
 // impl<T> RcCell<T> { fn new(v: Option<T>) -> Self { Self(std::rc::Rc::new(std::cell::RefCell::new(v))) } }
-
-
 
 pub fn scene_to_instances(scene: &engine_scene::Scene) -> Vec<engine_render::InstanceData> {
     scene
@@ -400,3 +382,44 @@ pub fn scene_to_instances(scene: &engine_scene::Scene) -> Vec<engine_render::Ins
         .collect()
 }
 
+#[wasm_bindgen]
+pub async fn init(opts: EngineOptions) -> Result<Engine, JsValue> {
+    console_error_panic_hook::set_once();
+
+    // Log build info
+    web_sys::console::log_1(
+        &format!(
+            "Ironhold build {} ({} @ {})",
+            build_id(),
+            build_sha(),
+            build_time()
+        )
+        .into(),
+    );
+
+    let mut canvas: Option<HtmlCanvasElement> = None;
+    if let Some(id) = opts.canvas_id.clone() {
+        let window = web_sys::window().ok_or_else(|| JsValue::from_str("no window"))?;
+        let doc = window
+            .document()
+            .ok_or_else(|| JsValue::from_str("no document"))?;
+        let el = doc
+            .get_element_by_id(&id)
+            .ok_or_else(|| JsValue::from_str("canvas not found"))?;
+        canvas = Some(
+            el.dyn_into::<HtmlCanvasElement>()
+                .map_err(|_| JsValue::from_str("bad canvas"))?,
+        );
+    }
+
+    Ok(Engine {
+        app: EngineApp::default(),
+        canvas,
+        gfx: None,
+        raf_handle: None,
+        pipeline: None,
+        running: false,
+        last_ts: Date::now(), // milliseconds
+        current_scene: None,
+    })
+}

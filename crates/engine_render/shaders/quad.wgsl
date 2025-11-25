@@ -3,6 +3,13 @@
 // Packed layout using vec4 (16-byte alignment) to match Rust structs.
 // Each instance = 64 bytes (two vec4 for Transform, two vec4 for Sprite).
 
+struct Camera {
+  // 2D ortho matrix packed into 4x4 for alignment simplicity
+  view_proj: mat4x4<f32>,
+};
+@group(1) @binding(0)
+var<uniform> camera: Camera;
+
 struct Transform {
   t0: vec4<f32>, // position.x, position.y, rotation(rad), pad
   t1: vec4<f32>, // scale.x, scale.y, pad, pad
@@ -59,6 +66,11 @@ fn vs_main(
 
   var out: VertexOutput;
   out.position = vec4<f32>(world_pos, 0.0, 1.0);
+  out.color = inst.sprite.color;
+
+  // clip to projection
+  let world = vec4<f32>(world_pos, 0.0, 1.0);
+  out.position = camera.view_proj * world;
   out.color = inst.sprite.color;
   return out;
 }
