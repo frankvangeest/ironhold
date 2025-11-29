@@ -171,7 +171,7 @@ impl QuadPipeline {
     }
 
     /// Update camera matrix (e.g., on window resize).
-    pub fn update_camera(&self, queue: &Queue, width: u32, height: u32) {
+    pub fn update_camera(&self, queue: &Queue, _width: u32, _height: u32) {
         // let ortho = Mat4::orthographic_lh(0.0, width as f32, 0.0, height as f32, -1.0, 1.0);
         let ortho = Mat4::orthographic_lh(-10.0, 10.0, -10.0, 10.0, -1.0, 1.0);
         let camera_uniform = CameraUniform {

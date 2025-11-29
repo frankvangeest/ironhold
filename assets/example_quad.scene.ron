@@ -1,39 +1,45 @@
 
 Scene(
-    name: "ExampleScene",
+    name: "QuadExampleScene",
     entities: [
         (
+            id: 1,
+            name: "RedQuad",
             transform: (
                 position: (0.0, 0.0),
                 rotation: 0.0,              // deg
                 scale: (1.0, 1.0),
             ),
-            sprite: (
+            sprite: Some((
                 dimensions: (1.0, 1.0),     // width, height
                 color: (1.0, 0.0, 0.0, 1.0), // Red
-            ),
+            )),
         ),
         (
+            id: 2,
+            name: "GreenQuad",
             transform: (
                 position: (2.0, 1.0),
                 rotation: 45.0,             // deg
                 scale: (1.0, 1.0),
             ),
-            sprite: (
+            sprite: Some((
                 dimensions: (0.5, 2.0),
                 color: (0.0, 1.0, 0.0, 1.0), // Green
-            ),
+            )),
         ),
         (
+            id: 3,
+            name: "BlueQuad",
             transform: (
                 position: (-1.5, -0.5),
                 rotation: 90.0,             // deg
                 scale: (1.0, 0.75),
             ),
-            sprite: (
+            sprite: Some((
                 dimensions: (2.0, 1.0),
                 color: (0.0, 0.0, 1.0, 1.0), // Blue
-            ),
+            )),
         ),
     ],
 )

@@ -15,8 +15,16 @@ pub struct Scene {
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct Entity {
+    pub id: u32,
+    pub name: String,
     pub transform: Transform,
-    pub sprite: Sprite,
+
+    // Optional components
+    #[serde(default)]
+    pub sprite: Option<Sprite>,
+
+    #[serde(default)]
+    pub mesh: Option<Mesh>,
 }
 
 /// Spatial transform.
@@ -37,6 +45,13 @@ pub struct Transform {
 pub struct Sprite {
     pub dimensions: (f32, f32),
     pub color: (f32, f32, f32, f32),
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
+pub struct Mesh {
+    pub file: String,
+    pub node: Option<usize>,
+    pub primitive: Option<usize>,
 }
 
 impl Scene {

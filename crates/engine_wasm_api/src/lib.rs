@@ -224,39 +224,43 @@ impl Engine {
         };
 
         // Scene -> instances
-        let (inst_count, inst_bytes) = if let Some(scene) = self.current_scene.as_ref() {
-            let instances = scene_to_instances(scene);
-            
-            for (i, inst) in instances.iter().enumerate() {
-                web_sys::console::log_1(&format!(
-                    "inst[{}]: pos=({:.2},{:.2}) rot={:.2} dims=({:.2},{:.2}) color=({:.2},{:.2},{:.2},{:.2})",
-                    i,
-                    inst.transform.t0[0], inst.transform.t0[1], inst.transform.t0[2],
-                    inst.sprite.s0[0], inst.sprite.s0[1],
-                    inst.sprite.color[0], inst.sprite.color[1], inst.sprite.color[2], inst.sprite.color[3]
-                ).into());
-            }
+        if self.current_scene.is_some() {
+            let (_inst_count, _inst_bytes) = if let Some(scene) = self.current_scene.as_ref() {
+                let instances = scene_to_instances(scene);
+                
+                // Debug logging of instances
+                // for (i, inst) in instances.iter().enumerate() {
+                //     web_sys::console::log_1(&format!(
+                //         "inst[{}]: pos=({:.2},{:.2}) rot={:.2} dims=({:.2},{:.2}) color=({:.2},{:.2},{:.2},{:.2})",
+                //         i,
+                //         inst.transform.t0[0], inst.transform.t0[1], inst.transform.t0[2],
+                //         inst.sprite.s0[0], inst.sprite.s0[1],
+                //         inst.sprite.color[0], inst.sprite.color[1], inst.sprite.color[2], inst.sprite.color[3]
+                //     ).into());
+                // }
 
-            web_sys::console::log_1(&format!(
-                "scene entities = {}, instances = {}",
-                scene.entities.len(), instances.len()
-            ).into());
+                // web_sys::console::log_1(&format!(
+                //     "scene entities = {}, instances = {}",
+                //     scene.entities.len(), instances.len()
+                // ).into());
 
-            // Capacity + upload logging happens in pipeline (see below)
-            if let Some(pip) = self.pipeline.as_mut() {
-                pip.ensure_capacity(&gfx.device, &instances);
-                pip.update_instances(&gfx.queue, &instances);
-                (instances.len() as u32, (instances.len() * std::mem::size_of::<engine_render::InstanceData>()) as u64)
+                // Capacity + upload logging happens in pipeline (see below)
+                if let Some(pip) = self.pipeline.as_mut() {
+                    pip.ensure_capacity(&gfx.device, &instances);
+                    pip.update_instances(&gfx.queue, &instances);
+                    (instances.len() as u32, (instances.len() * std::mem::size_of::<engine_render::InstanceData>()) as u64)
+                } else {
+                    web_sys::console::error_1(&"pipeline None; cannot upload instances".into());
+                    (0, 0)
+                }
             } else {
-                web_sys::console::error_1(&"pipeline None; cannot upload instances".into());
+                web_sys::console::warn_1(&"current_scene None".into());
                 (0, 0)
-            }
-        } else {
-            web_sys::console::warn_1(&"current_scene None".into());
-            (0, 0)
-        };
+            };
+        }
 
-        web_sys::console::log_1(&format!("inst_count = {}, inst_bytes = {}", inst_count, inst_bytes).into());
+        // Debug log instance count and bytes
+        // web_sys::console::log_1(&format!("inst_count = {}, inst_bytes = {}", inst_count, inst_bytes).into());
 
         // Acquire + reconfigure path already logs; keep it
         let frame = match gfx.surface.get_current_texture() {
@@ -308,7 +312,7 @@ impl Engine {
                 rpass.set_bind_group(0, &pip.instance_bind_group, &[]);
                 rpass.set_bind_group(1, &pip.camera_bind_group, &[]);
 
-                web_sys::console::log_1(&format!("draw(verts=6, instances={})", pip.instance_count).into());
+                // web_sys::console::log_1(&format!("draw(verts=6, instances={})", pip.instance_count).into()); // debug
                 rpass.draw(0..6, 0..pip.instance_count);
             }
         } else {
@@ -344,6 +348,8 @@ pub fn scene_to_instances(scene: &engine_scene::Scene) -> Vec<engine_render::Ins
             // Rotation is authored in degrees in RON; WGSL expects radians.
             let rot_rad = e.transform.rotation.to_radians();
 
+            let sprite = e.sprite.as_ref().expect("Entity missing sprite component");
+
             engine_render::InstanceData {
                 transform: engine_render::Transform {
                     // t0: position.x, position.y, rotation(rad), pad
@@ -364,17 +370,17 @@ pub fn scene_to_instances(scene: &engine_scene::Scene) -> Vec<engine_render::Ins
                 sprite: engine_render::Sprite {
                     // s0: dimensions.x, dimensions.y, pad, pad
                     s0: [
-                        e.sprite.dimensions.0,
-                        e.sprite.dimensions.1,
+                        sprite.dimensions.0,
+                        sprite.dimensions.1,
                         0.0,
                         0.0,
                     ],
                     // RGBA
                     color: [
-                        e.sprite.color.0,
-                        e.sprite.color.1,
-                        e.sprite.color.2,
-                        e.sprite.color.3,
+                        sprite.color.0,
+                        sprite.color.1,
+                        sprite.color.2,
+                        sprite.color.3,
                     ],
                 },
             }

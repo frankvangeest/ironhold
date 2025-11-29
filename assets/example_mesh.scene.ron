@@ -1,0 +1,17 @@
+Scene(
+    name: "MeshExampleScene",
+    entities: [
+        (
+            transform: (
+                position: (0.0, 0.0, 0.0),
+                rotation: (0.0, 45.0, 0.0),
+                scale: (1.0, 1.0, 1.0),
+            ),
+            mesh: Some((
+                file: "assets/model/kube.gltf",
+                node: 0,         // optional: glTF node index
+                primitive: 0,    // optional: primitive index
+            )),
+        ),
+    ],
+)

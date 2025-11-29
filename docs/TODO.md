@@ -14,7 +14,7 @@
     - ✅ Ensure WGSL shader uses packed vec4 layout for InstanceData (Transform + Sprite)
     - ✅ Update Rust structs (Transform, Sprite, InstanceData) to match WGSL layout
     - ✅ Implement `scene_to_instances(scene)` to convert RON entities into InstanceData
-    - ✅ Load `assets/example_scene.ron` via `fetch()` in JS and call `engine.load_scene_from_ron()`
+    - ✅ Load `assets/example_quad.scene.ron` via `fetch()` in JS and call `engine.load_scene_from_ron()`
     - ✅ Create instance buffer and bind group in QuadPipeline
     - ✅ Implement dynamic buffer resizing (`ensure_capacity()`) for variable instance counts
     - ✅ **Camera setup (orthographic projection):**
@@ -24,7 +24,7 @@
         - ✅ Modify WGSL vertex shader to multiply `camera.view_proj * world_pos`
         - ✅ Implement `update_camera(queue, width, height)` in QuadPipeline
         - ✅ Call `update_camera()` inside `Engine::reconfigure_surface()` after canvas resize
-    - ✅ Verify rendering of all 3 quads from `example_scene.ron` with correct positions, scales, and colors
+    - ✅ Verify rendering of all 3 quads from `example_quad.scene.ron` with correct positions, scales, and colors
   - [ ] Wire hot reload: on `asset-changed`, `fetch(url)` → parse RON → apply scene/asset
     - [ ] Implement WebSocket client callback in Rust (`start_hot_reload`) to receive `asset-changed` messages
     - [ ] Parse incoming JSON message into a typed enum (already partially done)
