@@ -31,7 +31,7 @@ Currently exported from `engine_wasm_api` (subject to iteration):
 - `Engine.set_play_mode(play: bool)`
 
 `EngineOptions`:
-- `canvas_id(string)`, `assets_base_url(string)`, `enable_2d(bool)`, `enable_3d(bool)`
+- `canvas_id(string)`, `assets_base_url(string)`
 
 ## Editor Modes
 

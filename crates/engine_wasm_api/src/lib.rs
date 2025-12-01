@@ -16,7 +16,19 @@ use platform_web::WgpuContext;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::HtmlCanvasElement;
-use engine_render::{QuadPipeline, InstanceData};
+use engine_render::{
+    BGPipeline, 
+    QuadPipeline, 
+    MeshPipeline, 
+    GUIPipeline,
+};
+
+mod helpers;
+use helpers::{scene_to_instances, scene_to_meshes};
+use engine_types::{
+    InstanceData,
+    MeshData,
+};
 
 // Build info functions
 fn build_id() -> &'static str {
@@ -74,10 +86,16 @@ pub struct Engine {
     raf_handle: Option<
         std::rc::Rc<std::cell::RefCell<Option<wasm_bindgen::closure::Closure<dyn FnMut(f64)>>>>,
     >,
-    pipeline: Option<QuadPipeline>,
-    current_scene: Option<engine_scene::Scene>,
+    bg_pipeline: Option<BGPipeline>,
+    quad_pipeline: Option<QuadPipeline>,
+    mesh_pipeline: Option<MeshPipeline>,
+    gui_pipeline: Option<GUIPipeline>,
+    mesh_data: Option<MeshData>,
+    current_scene: Option<Scene>,
     running: bool,
     last_ts: f64,
+    tick_ts: f64, // only show error after x seconds and not every tick
+    tick_interval: f64,
 }
 
 #[wasm_bindgen]
@@ -89,22 +107,30 @@ impl Engine {
             .ok_or(JsValue::from_str("no canvas bound"))?;
         let gfx = platform_web::wgpu_init::init_wgpu(canvas).await?;
 
-        // Build initial instance data (empty or from current_scene)
-        let instances: Vec<InstanceData> = if let Some(scene) = &self.current_scene {
-            scene_to_instances(scene) // mapping helper (see below)
-        } else {
-            Vec::new()
-        };
+        // Prepare empty quad pipeline
+        let quad_instances: Vec<InstanceData> = Vec::new();
+        self.quad_pipeline = Some(QuadPipeline::new(&gfx.device, gfx.config.format, &quad_instances));
 
-        let quad = QuadPipeline::new(&gfx.device, gfx.config.format, &instances);
-        self.pipeline = Some(quad);
+        // Prepare empty mesh pipeline
+        let mesh_data: &MeshData = &self.mesh_data.clone().unwrap();
+        self.mesh_pipeline = Some(MeshPipeline::new(
+            &gfx.device,
+            gfx.config.format,
+            &mesh_data.vertices,
+            &mesh_data.indices,
+        ));
+        
         self.gfx = Some(gfx);
 
-        
-        // After creating gfx and pipeline
-        if let (Some(pip), Some(gfx)) = (self.pipeline.as_ref(), self.gfx.as_ref()) {
-            pip.update_camera(&gfx.queue, gfx.config.width, gfx.config.height);
+        // After creating gfx and pipelines, update camera projections
+        if let (Some(quad_pipeline), Some(gfx)) = (self.quad_pipeline.as_ref(), self.gfx.as_ref()) {
+            quad_pipeline.update_camera(&gfx.queue, gfx.config.width, gfx.config.height);
         }
+        if let (Some(mesh_pipeline), Some(gfx)) = (self.mesh_pipeline.as_ref(), self.gfx.as_ref()) {
+            mesh_pipeline.update_camera(&gfx.queue, gfx.config.width, gfx.config.height);
+        }
+
+        self.tick_ts = 15000.0;
 
         Ok(())
     }
@@ -133,8 +159,11 @@ impl Engine {
             platform_web::wgpu_init::reconfigure_surface(gfx);
 
             // ✅ Update camera projection to match new canvas size
-            if let Some(pipeline) = self.pipeline.as_ref() {
-                pipeline.update_camera(&gfx.queue, new_w, new_h);
+            if let Some(quad_pipeline) = self.quad_pipeline.as_ref() {
+                quad_pipeline.update_camera(&gfx.queue, new_w, new_h);
+            }
+            if let Some(mesh_pipeline) = self.mesh_pipeline.as_ref() {
+                mesh_pipeline.update_camera(&gfx.queue, new_w, new_h);
             }
         } else {
             web_sys::console::warn_1(&"reconfigure_surface called but gfx is None".into());
@@ -218,45 +247,72 @@ impl Engine {
     
     pub fn tick(&mut self, _dt_ms: f32) {
         self.app.update();
+        if self.tick_ts < 0.0 {
+            self.tick_ts = 0.0;
+        }
+        self.tick_ts += _dt_ms as f64;
+        // web_sys::console::log_1(&format!("self.tick_ts: {0} _dt_ms {1}", self.tick_ts, _dt_ms).into());
+
         let Some(gfx) = self.gfx.as_mut() else { 
-            web_sys::console::error_1(&"gfx None in tick()".into());
+            if self.tick_ts >= self.tick_interval {
+                web_sys::console::error_1(&"gfx None in tick()".into());
+            }
             return; 
         };
 
         // Scene -> instances
-        if self.current_scene.is_some() {
-            let (_inst_count, _inst_bytes) = if let Some(scene) = self.current_scene.as_ref() {
-                let instances = scene_to_instances(scene);
-                
-                // Debug logging of instances
-                // for (i, inst) in instances.iter().enumerate() {
-                //     web_sys::console::log_1(&format!(
-                //         "inst[{}]: pos=({:.2},{:.2}) rot={:.2} dims=({:.2},{:.2}) color=({:.2},{:.2},{:.2},{:.2})",
-                //         i,
-                //         inst.transform.t0[0], inst.transform.t0[1], inst.transform.t0[2],
-                //         inst.sprite.s0[0], inst.sprite.s0[1],
-                //         inst.sprite.color[0], inst.sprite.color[1], inst.sprite.color[2], inst.sprite.color[3]
-                //     ).into());
-                // }
+        let (_inst_count, _inst_bytes) = if let Some(scene) = self.current_scene.as_ref() {
+            let quad_instances = scene_to_instances(scene);
+            if self.tick_ts >= self.tick_interval {
+                web_sys::console::log_1(&format!("quad_instances: {0}", quad_instances.clone().into_iter().collect::<Vec<_>>().len()).into());
+            }
 
-                // web_sys::console::log_1(&format!(
-                //     "scene entities = {}, instances = {}",
-                //     scene.entities.len(), instances.len()
-                // ).into());
-
-                // Capacity + upload logging happens in pipeline (see below)
-                if let Some(pip) = self.pipeline.as_mut() {
-                    pip.ensure_capacity(&gfx.device, &instances);
-                    pip.update_instances(&gfx.queue, &instances);
-                    (instances.len() as u32, (instances.len() * std::mem::size_of::<engine_render::InstanceData>()) as u64)
-                } else {
-                    web_sys::console::error_1(&"pipeline None; cannot upload instances".into());
-                    (0, 0)
-                }
+            // Capacity + upload logging happens in pipeline (see below)
+            if let Some(quad_pipeline) = self.quad_pipeline.as_mut() {
+                quad_pipeline.ensure_capacity(&gfx.device, &quad_instances);
+                quad_pipeline.update_instances(&gfx.queue, &quad_instances);
+                (quad_instances.len() as u32, (quad_instances.len() * std::mem::size_of::<InstanceData>()) as u64)
             } else {
-                web_sys::console::warn_1(&"current_scene None".into());
+                if self.tick_ts >= self.tick_interval {
+                    web_sys::console::warn_1(&"quad_pipeline None; cannot upload instances".into());
+                }
                 (0, 0)
-            };
+            }
+        } else {
+            if self.tick_ts >= self.tick_interval {
+                web_sys::console::warn_1(&"current_scene None".into());
+            }
+            (0, 0)
+        };
+
+
+        // Creating pipeline if missing and mesh_data exists
+        if self.mesh_pipeline.is_none() {
+            if let Some(mesh_data) = &self.mesh_data {
+                if !mesh_data.vertices.is_empty()
+                && !mesh_data.indices.is_empty()
+                {
+                    web_sys::console::log_1(&"Creating MeshPipeline.".into());
+                    self.mesh_pipeline = Some(MeshPipeline::new(
+                        &gfx.device,
+                        gfx.config.format,
+                        &mesh_data.vertices,
+                        &mesh_data.indices,
+                    ));
+                }
+            }
+        }
+
+        // Update Mesh data for Rendering
+        if let (Some(mesh_pipeline), Some(mesh_data)) = (self.mesh_pipeline.as_mut(), self.mesh_data.as_ref()) {
+            mesh_pipeline.ensure_vertex_capacity(&gfx.device, &mesh_data.vertices);
+            mesh_pipeline.ensure_index_capacity(&gfx.device, &mesh_data.indices);
+            gfx.queue.write_buffer(&mesh_pipeline.vertex_buffer, 0, bytemuck::cast_slice(&mesh_data.vertices));
+            gfx.queue.write_buffer(&mesh_pipeline.index_buffer, 0, bytemuck::cast_slice(&mesh_data.indices));
+        } else {
+            if self.tick_ts >= self.tick_interval {
+                web_sys::console::warn_1(&"mesh_pipeline None; cannot upload mesh_data".into());
+            }
         }
 
         // Debug log instance count and bytes
@@ -288,39 +344,54 @@ impl Engine {
             label: Some("ironhold_encoder"),
         });
 
-        if let Some(pip) = self.pipeline.as_ref() {
-            // Start a render pass
-            {
-                let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                    label: Some("ironhold_render_pass"),
-                    color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                        view: &view,
-                        depth_slice: None,
-                        resolve_target: None,
-                        ops: wgpu::Operations {
-                            load: wgpu::LoadOp::Clear(wgpu::Color { r: 135.0/255.0, g: 206.0/255.0, b: 235.0/255.0, a: 1.0 }),
-                            store: wgpu::StoreOp::Store,
-                        },
-                    })],
-                    depth_stencil_attachment: None,
-                    occlusion_query_set: None,
-                    timestamp_writes: None,
-                });
+        // Start a render pass
+        {
+            let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("ironhold_render_pass"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: &view,
+                    depth_slice: None,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(wgpu::Color { r: 135.0/255.0, g: 206.0/255.0, b: 235.0/255.0, a: 1.0 }),
+                        store: wgpu::StoreOp::Store,
+                    },
+                })],
+                depth_stencil_attachment: None,
+                occlusion_query_set: None,
+                timestamp_writes: None,
+            });
 
-                // Bind groups (indices must match WGSL)
-                rpass.set_pipeline(&pip.pipeline);
-                rpass.set_bind_group(0, &pip.instance_bind_group, &[]);
-                rpass.set_bind_group(1, &pip.camera_bind_group, &[]);
-
-                // web_sys::console::log_1(&format!("draw(verts=6, instances={})", pip.instance_count).into()); // debug
-                rpass.draw(0..6, 0..pip.instance_count);
+            if let Some(bg_pipeline) = self.bg_pipeline.as_ref() {
+                bg_pipeline.draw(&mut rpass);
             }
-        } else {
-            web_sys::console::error_1(&"pipeline None; skipping draw".into());
+            if let Some(quad_pipeline) = self.quad_pipeline.as_ref() {
+                quad_pipeline.draw(&mut rpass);
+            } else {
+                if self.tick_ts >= self.tick_interval {
+                    web_sys::console::warn_1(&"quad_pipeline None; skipping draw".into());
+                }
+            }
+            if let (Some(mesh_pipeline), Some(mesh_data)) = (self.mesh_pipeline.as_ref(), &self.mesh_data ) {
+                if !mesh_data.vertices.is_empty()
+                && !mesh_data.indices.is_empty()
+                {
+                    mesh_pipeline.draw(&mut rpass);
+                }
+            } else {
+                if self.tick_ts >= self.tick_interval {
+                    web_sys::console::warn_1(&"mesh_pipeline None; skipping draw".into());
+                }
+            }
         }
 
         gfx.queue.submit(Some(encoder.finish()));
         frame.present();
+
+        if self.tick_ts >= self.tick_interval {
+            self.tick_ts = self.tick_ts - self.tick_interval;
+            // web_sys::console::log_1(&"tick completed".into());
+        }
     }
 
 
@@ -334,58 +405,6 @@ impl Engine {
     pub fn set_play_mode(&mut self, play: bool) {
         set_mode(&mut self.app, if play { Mode::Play } else { Mode::Edit });
     }
-}
-
-// Helper to allow storing closures (not fully used yet)
-// struct RcCell<T>(std::rc::Rc<std::cell::RefCell<Option<T>>>);
-// impl<T> RcCell<T> { fn new(v: Option<T>) -> Self { Self(std::rc::Rc::new(std::cell::RefCell::new(v))) } }
-
-pub fn scene_to_instances(scene: &engine_scene::Scene) -> Vec<engine_render::InstanceData> {
-    scene
-        .entities
-        .iter()
-        .map(|e| {
-            // Rotation is authored in degrees in RON; WGSL expects radians.
-            let rot_rad = e.transform.rotation.to_radians();
-
-            let sprite = e.sprite.as_ref().expect("Entity missing sprite component");
-
-            engine_render::InstanceData {
-                transform: engine_render::Transform {
-                    // t0: position.x, position.y, rotation(rad), pad
-                    t0: [
-                        e.transform.position.0,
-                        e.transform.position.1,
-                        rot_rad,
-                        0.0,
-                    ],
-                    // t1: scale.x, scale.y, pad, pad
-                    t1: [
-                        e.transform.scale.0,
-                        e.transform.scale.1,
-                        0.0,
-                        0.0,
-                    ],
-                },
-                sprite: engine_render::Sprite {
-                    // s0: dimensions.x, dimensions.y, pad, pad
-                    s0: [
-                        sprite.dimensions.0,
-                        sprite.dimensions.1,
-                        0.0,
-                        0.0,
-                    ],
-                    // RGBA
-                    color: [
-                        sprite.color.0,
-                        sprite.color.1,
-                        sprite.color.2,
-                        sprite.color.3,
-                    ],
-                },
-            }
-        })
-        .collect()
 }
 
 #[wasm_bindgen]
@@ -423,9 +442,18 @@ pub async fn init(opts: EngineOptions) -> Result<Engine, JsValue> {
         canvas,
         gfx: None,
         raf_handle: None,
-        pipeline: None,
+        bg_pipeline: None,
+        quad_pipeline: None,
+        mesh_pipeline: None,
+        gui_pipeline: None,
+        mesh_data: Some(MeshData {
+            vertices: Vec::new(),
+            indices: Vec::new(),
+        }),
         running: false,
         last_ts: Date::now(), // milliseconds
         current_scene: None,
+        tick_ts: 15000.0,
+        tick_interval: 15000.0,
     })
 }

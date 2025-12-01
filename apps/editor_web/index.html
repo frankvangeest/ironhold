@@ -69,7 +69,7 @@
 
         await engine.mount_async();   // WebGPU device/queue/surface + configure
 
-        const sceneUrl = "/assets/example_quad.scene.ron";
+        const sceneUrl = "/assets/example_quad_and_mesh.scene.ron";
         try {
           const response = await fetch(sceneUrl);
           console.log("response: ", response);

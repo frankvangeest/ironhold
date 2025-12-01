@@ -1,6 +1,9 @@
 /**
  * path: /crates/engine_scene/src/lib.rs
  * description: Scene representation and serialization.
+ * Declarative scene format using RON.
+ * engine_scene should only describe what exists (entities, components, references to assets).
+ * It should not know how assets are loaded or rendered.
  */
 use serde::{
     Deserialize,
@@ -17,9 +20,14 @@ pub struct Scene {
 pub struct Entity {
     pub id: u32,
     pub name: String,
-    pub transform: Transform,
 
     // Optional components
+    #[serde(default)]
+    pub transform_2d: Option<Transform2D>,
+
+    #[serde(default)]
+    pub transform_3d: Option<Transform3D>,
+
     #[serde(default)]
     pub sprite: Option<Sprite>,
 
@@ -32,7 +40,7 @@ pub struct Entity {
 /// - `rotation`: degrees (clockwise, screen-space; adjust later if needed)
 /// - `scale`: (sx, sy) multiplicative scaling
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
-pub struct Transform {
+pub struct Transform2D {
     pub position: (f32, f32),
     pub rotation: f32,
     pub scale: (f32, f32),
@@ -45,6 +53,17 @@ pub struct Transform {
 pub struct Sprite {
     pub dimensions: (f32, f32),
     pub color: (f32, f32, f32, f32),
+}
+
+/// Spatial transform.
+/// - `position`: (x, y, z) in world units
+/// - `rotation`: degrees for (x, y, z, clockwize)
+/// - `scale`: (sx, sy, sz) multiplicative scaling
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
+pub struct Transform3D {
+    pub position: (f32, f32, f32),
+    pub rotation: (f32, f32, f32),
+    pub scale: (f32, f32, f32),
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]

@@ -1,0 +1,18 @@
+sourced from https://www.thebasemesh.com/asset/anvil
+
+https://www.thebasemesh.com/faq
+
+Can I use these Assets in commercial works?
+You certainly can as these models are under the CC0 licence. 
+This license gives you the freedom to use the Assets as you see fit. 
+There are no restrictions in how you use the Assets.
+
+Feel free to credit thebasemesh.com in your project but it’s not mandatory. 
+I would however, ask you to use the meshes in the spirit in which they are created, 
+and not to put them behind a paywall unless you have altered them in a significant way.​
+
+“You can copy, modify, distribute and perform the work, even for commercial purposes, 
+all without asking permission.”
+
+Learn more about the CC0 license.
+https://creativecommons.org/publicdomain/zero/1.0/

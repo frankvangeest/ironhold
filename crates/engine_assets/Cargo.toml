@@ -12,4 +12,12 @@ edition = "2021"
 serde = { version = "1", features = ["derive"] }
 ron = "0.8"
 thiserror = "1"
+wasm-bindgen = "0.2.105"
+web-sys = "0.3.83"
+js-sys = "0.3.83"
+gltf = "1.4.1"
+wasm-bindgen-futures = "0.4.56"
 
+engine_scene = { path = "../engine_scene" }
+engine_render = { path = "../engine_render" }
+engine_types = { path = "../engine_types" }

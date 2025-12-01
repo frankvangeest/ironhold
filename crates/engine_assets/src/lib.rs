@@ -3,6 +3,9 @@
  * description: Asset management for the engine.
  */
 use thiserror::Error;
+mod mesh_loader;
+pub use mesh_loader::{load_mesh_stub};
+pub use engine_types::MeshData;
 
 #[derive(Error, Debug)]
 pub enum AssetError {

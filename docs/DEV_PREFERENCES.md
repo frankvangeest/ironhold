@@ -1,7 +1,9 @@
 # Development Preferences
 
 - Use Window cmd Shell
-- Generate Compact patches
+- Generate Compact patches.
+    - When showing code snippets to insert, also give position reference information within the code. 
+      Like: After what line of code, or before what line of code, or what code lines it replaces.
 - Keep features and versions local to each crate until things stabilize; avoid a big [workspace.dependencies] early on.
 - Guard web-only editor code with #![cfg(target_arch = "wasm32")] to keep IDE builds quiet.
 - Commit frequently with short messages tied to docs tasks (e.g., docs: add WEBGPU_SETUP / xtask: dev server & ws / engine_wasm_api: RAF loop).

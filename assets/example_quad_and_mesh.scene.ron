@@ -1,0 +1,59 @@
+
+Scene(
+    name: "QuadExampleScene",
+    entities: [
+        (
+            id: 1,
+            name: "RedQuad",
+            transform_2d: Some((
+                position: (0.0, 0.0),
+                rotation: 0.0,              // deg
+                scale: (1.0, 1.0),
+            )),
+            sprite: Some((
+                dimensions: (1.0, 1.0),     // width, height
+                color: (1.0, 0.0, 0.0, 1.0), // Red
+            )),
+        ),
+        (
+            id: 2,
+            name: "GreenQuad",
+            transform_2d: Some((
+                position: (2.0, 1.0),
+                rotation: 45.0,             // deg
+                scale: (1.0, 1.0),
+            )),
+            sprite: Some((
+                dimensions: (0.5, 2.0),
+                color: (0.0, 1.0, 0.0, 1.0), // Green
+            )),
+        ),
+        (
+            id: 3,
+            name: "BlueQuad",
+            transform_2d: Some((
+                position: (-1.5, -0.5),
+                rotation: 90.0,             // deg
+                scale: (1.0, 0.75),
+            )),
+            sprite: Some((
+                dimensions: (2.0, 1.0),
+                color: (0.0, 0.0, 1.0, 1.0), // Blue
+            )),
+        ),
+        (
+            id: 4,
+            name: "Mesh01",
+            transform_3d: Some((
+                position: (0.0, 0.0, 0.0),
+                rotation: (0.0, 45.0, 0.0),
+                scale: (1.0, 1.0, 1.0),
+            )),
+            // mesh: Some((
+            //     file: "assets/model/anvil.glb",
+            //     node: 0,         // optional: glTF node index
+            //     primitive: 0,    // optional: primitive index
+            // )),
+        ),
+    ],
+)

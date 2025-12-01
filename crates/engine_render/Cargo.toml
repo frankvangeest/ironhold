@@ -13,3 +13,5 @@ wgpu = "27.0"
 thiserror = "1"
 bytemuck = "1.24.0"
 glam = "0.30.9"
+
+engine_types = { path = "../engine_types" }

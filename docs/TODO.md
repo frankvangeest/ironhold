@@ -10,7 +10,7 @@
 
 # TODO
 - Scene rendering from data:
-  - [ ] Minimal `Scene` RON w/ 3 quad/sprite; render in the pipeline
+  - ✅ Minimal `Scene` RON w/ 3 quad/sprite; render in the pipeline
     - ✅ Ensure WGSL shader uses packed vec4 layout for InstanceData (Transform + Sprite)
     - ✅ Update Rust structs (Transform, Sprite, InstanceData) to match WGSL layout
     - ✅ Implement `scene_to_instances(scene)` to convert RON entities into InstanceData
@@ -25,6 +25,18 @@
         - ✅ Implement `update_camera(queue, width, height)` in QuadPipeline
         - ✅ Call `update_camera()` inside `Engine::reconfigure_surface()` after canvas resize
     - ✅ Verify rendering of all 3 quads from `example_quad.scene.ron` with correct positions, scales, and colors
+  - [ ] **Implement 3D Mesh Rendering (while keeping 2D quad rendering functional):
+    - [ ] Create `MeshPipeline` struct in `engine_render` (similar to `QuadPipeline`).
+    - [ ] Write WGSL shader for mesh rendering (vertex: position/normal/UV; fragment: basic color or texture).
+    - [ ] Define GPU buffer layout for mesh vertices and indices (use `bytemuck` for safety).
+    - [ ] Implement dynamic vertex/index buffer allocation and resizing.
+    - [ ] Add camera adjustments for perspective projection (replace orthographic for 3D).
+    - [ ] Extend `EngineOptions` to toggle 3D rendering.
+    - [ ] Integrate mesh loading from `engine_assets` (GLTF parsing stub).
+    - [ ] Update `engine_scene::Entity` mapping: if `mesh` present, convert to mesh instance.
+    - [ ] Implement fallback: if mesh asset missing, log warning and skip entity.
+    - [ ] Validate rendering with `assets/example_mesh.scene.ron` (basic cube).
+    - [ ] Ensure hot reload does not break when both 2D and 3D entities exist.
   - [ ] Wire hot reload: on `asset-changed`, `fetch(url)` → parse RON → apply scene/asset
     - [ ] Implement WebSocket client callback in Rust (`start_hot_reload`) to receive `asset-changed` messages
     - [ ] Parse incoming JSON message into a typed enum (already partially done)
@@ -37,7 +49,6 @@
     - [ ] Call `pipeline.update_instances()` to upload new instance data
     - [ ] Trigger a redraw (next RAF tick will render updated scene)
     - [ ] Add error handling and logging for fetch failures or parse errors
-  - [ ] Minimal `Scene` RON w/ one mesh; render in the pipeline
 - Editor:
   - [ ] Viewport texture integration (render to texture, display in egui panel)
   - [ ] Inspector stubs (once reflection lands)

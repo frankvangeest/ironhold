@@ -27,6 +27,8 @@ engine_scene = { path = "../engine_scene" }
 engine_assets = { path = "../engine_assets" }
 platform_web = { path = "../platform_web" }
 engine_render = { path = "../engine_render" }
+engine_types = { path = "../engine_types" }
+bytemuck = "1.24.0"
 
 
 # ✅ For the browser target, enable getrandom's JS backend (uses crypto.getRandomValues)

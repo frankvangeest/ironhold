@@ -1,0 +1,6 @@
+
+Scene(
+    name: "EmptyExampleScene",
+    entities: [
+    ],
+)
